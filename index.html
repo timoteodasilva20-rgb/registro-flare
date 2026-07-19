@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Registro de Parada do Flare</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#14171A; --panel:#1E2328; --panel-2:#262C33; --line:#333B44;
+    --flame-1:#FF7A1A; --flame-2:#C44510; --amber:#FFB020; --ok:#2BAF7D;
+    --text:#EDEFF2; --muted:#8A93A0;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:var(--bg); color:var(--text);
+    font-family:'Inter', system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color:transparent; }
+  body{ min-height:100vh; padding-bottom:90px; }
+
+  header{ padding:24px 20px 0; background:linear-gradient(180deg,#191D21 0%, var(--bg) 100%); border-bottom:1px solid var(--line); }
+  .brand{ display:flex; align-items:center; gap:12px; padding-bottom:18px; }
+  .flame-icon{ width:32px; height:32px; flex-shrink:0; }
+  .brand h1{ font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:22px; letter-spacing:0.5px; margin:0; text-transform:uppercase; line-height:1.1; }
+  .brand p{ margin:2px 0 0; font-size:12px; color:var(--muted); font-weight:500; }
+
+  .tabs{ display:flex; gap:6px; }
+  .tab{ flex:1; text-align:center; padding:12px 8px; font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:14px;
+    letter-spacing:0.4px; text-transform:uppercase; color:var(--muted); border-bottom:2px solid transparent; background:none; border-top:none; border-left:none; border-right:none; }
+  .tab.active{ color:var(--amber); border-bottom-color:var(--amber); }
+
+  main{ padding:18px 16px 0; max-width:560px; margin:0 auto; }
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  .step{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 16px; margin-bottom:14px; }
+  .step-head{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .step-num{ width:26px; height:26px; border-radius:7px; background:var(--panel-2); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:14px; color:var(--amber); flex-shrink:0; }
+  .step-title{ font-family:'Barlow Condensed', sans-serif; font-weight:600; font-size:17px; letter-spacing:0.3px; text-transform:uppercase; }
+  .step-optional{ font-size:11px; color:var(--muted); font-weight:500; margin-left:auto; text-transform:none; letter-spacing:0; }
+
+  .row{ display:flex; gap:8px; }
+  input[type="datetime-local"]{ flex:1; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:13px 12px; color:var(--text); font-size:16px; font-family:inherit; min-width:0; }
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:0.7; }
+  .btn-now{ background:var(--panel-2); border:1px solid var(--line); color:var(--amber); border-radius:10px; padding:0 16px; font-size:14px; font-weight:600; font-family:inherit; white-space:nowrap; }
+
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip{ flex:1 1 calc(50% - 8px); background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:13px 10px; font-size:14px; font-weight:600; font-family:inherit; text-align:center; line-height:1.25; }
+  .chip.selected{ background:linear-gradient(135deg, var(--flame-1), var(--flame-2)); border-color:transparent; color:#1A1000; }
+  #outroWrap{ margin-top:10px; display:none; }
+  #outroWrap.show{ display:block; }
+
+  textarea{ width:100%; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:13px 12px; color:var(--text); font-size:15px; font-family:inherit; resize:vertical; min-height:70px; }
+  textarea::placeholder, input::placeholder{ color:var(--muted); }
+
+  .field-error{ color:var(--flame-1); font-size:12px; font-weight:600; margin-top:6px; display:none; }
+
+  .footer-bar{ position:fixed; bottom:0; left:0; right:0; padding:14px 16px calc(14px + env(safe-area-inset-bottom)); background:linear-gradient(180deg, rgba(20,23,26,0) 0%, var(--bg) 30%); }
+  #submitBtn{ width:100%; max-width:560px; margin:0 auto; display:block; background:linear-gradient(135deg, var(--flame-1), var(--flame-2)); color:#1A1000; border:none; border-radius:14px; padding:17px; font-size:17px; font-weight:700; font-family:'Barlow Condensed', sans-serif; letter-spacing:0.5px; text-transform:uppercase; box-shadow:0 6px 20px rgba(255,122,26,0.25); }
+  #submitBtn:disabled{ opacity:0.5; }
+
+  /* histórico */
+  .hist-actions{ display:flex; gap:8px; margin-bottom:16px; }
+  .btn-download{ flex:1; background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:12px; font-size:13px; font-weight:600; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:6px; }
+  .btn-download.primary{ background:linear-gradient(135deg, var(--flame-1), var(--flame-2)); color:#1A1000; border-color:transparent; }
+
+  .summary{ display:flex; gap:10px; margin-bottom:16px; }
+  .summary-card{ flex:1; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px; text-align:center; }
+  .summary-card .num{ font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:22px; color:var(--amber); }
+  .summary-card .label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.3px; }
+
+  .record{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:12px; }
+  .record-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; gap:10px; }
+  .record-motivo{ font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:16px; text-transform:uppercase; letter-spacing:0.2px; }
+  .record-duration{ background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:4px 10px; font-size:12px; font-weight:700; color:var(--ok); white-space:nowrap; }
+  .record-dates{ font-size:13px; color:var(--muted); line-height:1.6; }
+  .record-obs{ font-size:13px; color:var(--text); margin-top:8px; padding-top:8px; border-top:1px solid var(--line); }
+  .record-del{ margin-top:10px; background:none; border:none; color:var(--flame-1); font-size:12px; font-weight:600; font-family:inherit; padding:0; }
+  .empty{ text-align:center; color:var(--muted); font-size:14px; padding:40px 20px; }
+
+  #overlay{ position:fixed; inset:0; background:rgba(10,12,14,0.92); display:none; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:30px; z-index:50; }
+  #overlay.show{ display:flex; }
+  .check{ width:74px; height:74px; border-radius:50%; background:rgba(43,175,125,0.15); border:2px solid var(--ok); display:flex; align-items:center; justify-content:center; margin-bottom:18px; }
+  #overlay h2{ font-family:'Barlow Condensed', sans-serif; font-size:24px; text-transform:uppercase; margin:0 0 8px; }
+  #overlay p{ color:var(--muted); font-size:14px; margin:0 0 24px; max-width:280px; }
+  #overlay button{ background:var(--panel-2); border:1px solid var(--line); color:var(--text); padding:13px 26px; border-radius:10px; font-family:inherit; font-weight:600; font-size:14px; }
+
+  #loadingMsg{ text-align:center; color:var(--muted); font-size:13px; padding:20px; display:none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg class="flame-icon" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2C12 2 6 8 6 13a6 6 0 0012 0c0-2-1-3-1-3s0 2-1.5 2C14 12 15 9 13 6c0 2-1 3-2 3 0-2 1-4 1-7z" fill="url(#g)"/>
+      <defs><linearGradient id="g" x1="6" y1="2" x2="18" y2="19"><stop stop-color="#FFB020"/><stop offset="1" stop-color="#C44510"/></linearGradient></defs>
+    </svg>
+    <div>
+      <h1>Registro de Parada</h1>
+      <p>Flare &middot; Planta de Biogás</p>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-view="registrar">Registrar</button>
+    <button class="tab" data-view="historico">Histórico</button>
+  </div>
+</header>
+
+<main>
+
+  <div class="view active" id="view-registrar">
+    <form id="form">
+      <div class="step">
+        <div class="step-head"><div class="step-num">1</div><div class="step-title">Início da parada</div></div>
+        <div class="row">
+          <input type="datetime-local" id="inicio" required>
+          <button type="button" class="btn-now" data-target="inicio">Agora</button>
+        </div>
+        <div class="field-error" id="err-inicio">Preencha o início da parada</div>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><div class="step-num">2</div><div class="step-title">Motivo da parada</div></div>
+        <div class="chips" id="motivoChips">
+          <button type="button" class="chip" data-value="Manutenção programada">Manutenção programada</button>
+          <button type="button" class="chip" data-value="Falha no sensor">Falha no sensor</button>
+          <button type="button" class="chip" data-value="Baixa pressão de biogás">Baixa pressão de biogás</button>
+          <button type="button" class="chip" data-value="Problema elétrico">Problema elétrico</button>
+          <button type="button" class="chip" data-value="Outro">Outro</button>
+        </div>
+        <div id="outroWrap"><textarea id="motivoOutro" placeholder="Descreva o motivo..."></textarea></div>
+        <div class="field-error" id="err-motivo">Selecione o motivo da parada</div>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><div class="step-num">3</div><div class="step-title">Retorno ao funcionamento</div></div>
+        <div class="row">
+          <input type="datetime-local" id="retorno" required>
+          <button type="button" class="btn-now" data-target="retorno">Agora</button>
+        </div>
+        <div class="field-error" id="err-retorno">Preencha o retorno / deve ser depois do início</div>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><div class="step-num">4</div><div class="step-title">Observações</div><div class="step-optional">opcional</div></div>
+        <textarea id="observacoes" placeholder="Alguma informação adicional..."></textarea>
+      </div>
+    </form>
+  </div>
+
+  <div class="view" id="view-historico">
+    <div class="hist-actions">
+      <button class="btn-download primary" id="downloadXlsx">⬇ Baixar Excel</button>
+      <button class="btn-download" id="downloadCsv">⬇ CSV</button>
+    </div>
+    <div class="summary">
+      <div class="summary-card"><div class="num" id="sumCount">0</div><div class="label">Paradas</div></div>
+      <div class="summary-card"><div class="num" id="sumTime">0h</div><div class="label">Tempo parado total</div></div>
+    </div>
+    <div id="loadingMsg">Carregando registros...</div>
+    <div id="recordsList"></div>
+  </div>
+
+</main>
+
+<div class="footer-bar" id="footerBar">
+  <button id="submitBtn">Registrar Parada</button>
+</div>
+
+<div id="overlay">
+  <div class="check"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5L20 6" stroke="#2BAF7D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <h2>Registrado!</h2>
+  <p>A parada do flare foi salva com sucesso.</p>
+  <button id="newEntryBtn">Novo registro</button>
+</div>
+
+<script>
+  // URL do Apps Script (Google Sheets) — agora é a única fonte de dados do app
+  const API_URL = "https://script.google.com/macros/s/AKfycbzxC2nBSnYBX1a68we_Tc010d4cyk4P5s8XLv9EBG0bLDlnAgbp1rbpferQCwdTdW6y/exec";
+
+  const inicioInput = document.getElementById('inicio');
+  const retornoInput = document.getElementById('retorno');
+  const chips = document.querySelectorAll('.chip');
+  const outroWrap = document.getElementById('outroWrap');
+  const motivoOutro = document.getElementById('motivoOutro');
+  let motivoSelecionado = null;
+
+  // ---------- Tabs ----------
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('view-' + tab.dataset.view).classList.add('active');
+      document.getElementById('footerBar').style.display = tab.dataset.view === 'registrar' ? 'block' : 'none';
+      if (tab.dataset.view === 'historico') loadRecords();
+    });
+  });
+
+  // ---------- Formulário ----------
+  document.querySelectorAll('.btn-now').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(btn.dataset.target);
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      target.value = now.toISOString().slice(0,16);
+    });
+  });
+
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      chips.forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+      motivoSelecionado = chip.dataset.value;
+      outroWrap.classList.toggle('show', motivoSelecionado === 'Outro');
+      document.getElementById('err-motivo').style.display = 'none';
+    });
+  });
+
+  function showError(id, show){ document.getElementById('err-' + id).style.display = show ? 'block' : 'none'; }
+
+  function formatDuration(min){
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return h + 'h ' + m + 'min';
+  }
+
+  document.getElementById('submitBtn').addEventListener('click', async () => {
+    let valid = true;
+    if (!inicioInput.value){ showError('inicio', true); valid = false; } else showError('inicio', false);
+    if (!motivoSelecionado || (motivoSelecionado === 'Outro' && !motivoOutro.value.trim())){ showError('motivo', true); valid = false; } else showError('motivo', false);
+    if (!retornoInput.value || (inicioInput.value && retornoInput.value <= inicioInput.value)){ showError('retorno', true); valid = false; } else showError('retorno', false);
+    if (!valid) return;
+
+    const motivoFinal = motivoSelecionado === 'Outro' ? motivoOutro.value.trim() : motivoSelecionado;
+
+    const payload = {
+      inicio: inicioInput.value,
+      motivo: motivoFinal,
+      retorno: retornoInput.value,
+      observacoes: document.getElementById('observacoes').value
+    };
+
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Salvando...';
+
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.status !== 'ok') throw new Error('resposta inesperada');
+      document.getElementById('overlay').classList.add('show');
+    } catch (e) {
+      alert('Não foi possível salvar o registro. Verifique a conexão e tente novamente.');
+    }
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Registrar Parada';
+  });
+
+  document.getElementById('newEntryBtn').addEventListener('click', () => {
+    document.getElementById('form').reset();
+    chips.forEach(c => c.classList.remove('selected'));
+    motivoSelecionado = null;
+    outroWrap.classList.remove('show');
+    document.getElementById('overlay').classList.remove('show');
+  });
+
+  // ---------- Histórico ----------
+  let cachedRecords = [];
+
+  async function loadRecords(){
+    const listEl = document.getElementById('recordsList');
+    const loadingEl = document.getElementById('loadingMsg');
+    loadingEl.style.display = 'block';
+    listEl.innerHTML = '';
+
+    try {
+      const res = await fetch(API_URL, { method: 'GET' });
+      const data = await res.json();
+      const records = (data && data.records) ? data.records : [];
+      records.sort((a, b) => new Date(b.inicio) - new Date(a.inicio));
+      cachedRecords = records;
+      renderRecords(records);
+    } catch (e) {
+      listEl.innerHTML = '<div class="empty">Não foi possível carregar os registros. Verifique a conexão.</div>';
+    }
+    loadingEl.style.display = 'none';
+  }
+
+  function renderRecords(records){
+    const listEl = document.getElementById('recordsList');
+    document.getElementById('sumCount').textContent = records.length;
+    const totalMin = records.reduce((sum, r) => sum + (Number(r.duracaoMin) || 0), 0);
+    document.getElementById('sumTime').textContent = formatDuration(totalMin);
+
+    if (records.length === 0){
+      listEl.innerHTML = '<div class="empty">Nenhuma parada registrada ainda.</div>';
+      return;
+    }
+
+    listEl.innerHTML = records.map(r => {
+      const dInicio = new Date(r.inicio);
+      const dRetorno = new Date(r.retorno);
+      const fmt = d => d.toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit'});
+      return `
+        <div class="record">
+          <div class="record-top">
+            <div class="record-motivo">${escapeHtml(r.motivo)}</div>
+            <div class="record-duration">${r.tempoParado || formatDuration(Number(r.duracaoMin)||0)}</div>
+          </div>
+          <div class="record-dates">
+            Início: ${fmt(dInicio)}<br>
+            Retorno: ${fmt(dRetorno)}
+          </div>
+          ${r.observacoes ? `<div class="record-obs">${escapeHtml(r.observacoes)}</div>` : ''}
+          <button class="record-del" data-id="${r.id}">Excluir registro</button>
+        </div>`;
+    }).join('');
+
+    listEl.querySelectorAll('.record-del').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Excluir este registro? Essa ação não pode ser desfeita.')) return;
+        btn.disabled = true;
+        btn.textContent = 'Excluindo...';
+        try {
+          await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'delete', id: btn.dataset.id })
+          });
+          loadRecords();
+        } catch (e) {
+          alert('Não foi possível excluir o registro.');
+          btn.disabled = false;
+          btn.textContent = 'Excluir registro';
+        }
+      });
+    });
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function buildTableData(){
+    return cachedRecords.map(r => ({
+      'Início da parada': new Date(r.inicio).toLocaleString('pt-BR'),
+      'Motivo': r.motivo,
+      'Retorno ao funcionamento': new Date(r.retorno).toLocaleString('pt-BR'),
+      'Tempo parado': r.tempoParado || formatDuration(Number(r.duracaoMin)||0),
+      'Observações': r.observacoes || ''
+    }));
+  }
+
+  document.getElementById('downloadXlsx').addEventListener('click', () => {
+    if (cachedRecords.length === 0){ alert('Ainda não há registros para exportar.'); return; }
+    const ws = XLSX.utils.json_to_sheet(buildTableData());
+    ws['!cols'] = [{wch:18},{wch:26},{wch:22},{wch:14},{wch:30}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Paradas do Flare');
+    XLSX.writeFile(wb, 'paradas_flare_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  });
+
+  document.getElementById('downloadCsv').addEventListener('click', () => {
+    if (cachedRecords.length === 0){ alert('Ainda não há registros para exportar.'); return; }
+    const data = buildTableData();
+    const headers = Object.keys(data[0]);
+    const csvRows = [headers.join(';')];
+    data.forEach(row => {
+      csvRows.push(headers.map(h => '"' + String(row[h]).replace(/"/g,'""') + '"').join(';'));
+    });
+    const blob = new Blob(['\uFEFF' + csvRows.join('\n')], {type:'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'paradas_flare_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+</script>
+
+</body>
+</html>
