@@ -2,391 +2,3520 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Registro de Parada do Flare</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Biogás</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-  :root{
-    --bg:#14171A; --panel:#1E2328; --panel-2:#262C33; --line:#333B44;
-    --flame-1:#FF7A1A; --flame-2:#C44510; --amber:#FFB020; --ok:#2BAF7D;
-    --text:#EDEFF2; --muted:#8A93A0;
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+
+  :root {
+    --bg: #0b0f1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1f2d45;
+    --accent: #00e5a0;
+    --accent2: #3b82f6;
+    --accent3: #f59e0b;
+    --accent4: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --motor: #3b82f6;
+    --flare: #f59e0b;
   }
-  *{ box-sizing:border-box; }
-  html,body{ margin:0; padding:0; background:var(--bg); color:var(--text);
-    font-family:'Inter', system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color:transparent; }
-  body{ min-height:100vh; padding-bottom:90px; }
 
-  header{ padding:24px 20px 0; background:linear-gradient(180deg,#191D21 0%, var(--bg) 100%); border-bottom:1px solid var(--line); }
-  .brand{ display:flex; align-items:center; gap:12px; padding-bottom:18px; }
-  .flame-icon{ width:32px; height:32px; flex-shrink:0; }
-  .brand h1{ font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:22px; letter-spacing:0.5px; margin:0; text-transform:uppercase; line-height:1.1; }
-  .brand p{ margin:2px 0 0; font-size:12px; color:var(--muted); font-weight:500; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
-  .tabs{ display:flex; gap:6px; }
-  .tab{ flex:1; text-align:center; padding:12px 8px; font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:14px;
-    letter-spacing:0.4px; text-transform:uppercase; color:var(--muted); border-bottom:2px solid transparent; background:none; border-top:none; border-left:none; border-right:none; }
-  .tab.active{ color:var(--amber); border-bottom-color:var(--amber); }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Montserrat', sans-serif;
+    min-height: 100vh;
+    padding: 0;
+  }
 
-  main{ padding:18px 16px 0; max-width:560px; margin:0 auto; }
-  .view{ display:none; }
-  .view.active{ display:block; }
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #0b1629 0%, #0d1f35 50%, #0b1629 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
 
-  .step{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 16px; margin-bottom:14px; }
-  .step-head{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
-  .step-num{ width:26px; height:26px; border-radius:7px; background:var(--panel-2); border:1px solid var(--line);
-    display:flex; align-items:center; justify-content:center; font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:14px; color:var(--amber); flex-shrink:0; }
-  .step-title{ font-family:'Barlow Condensed', sans-serif; font-weight:600; font-size:17px; letter-spacing:0.3px; text-transform:uppercase; }
-  .step-optional{ font-size:11px; color:var(--muted); font-weight:500; margin-left:auto; text-transform:none; letter-spacing:0; }
+  .header-left h1 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
 
-  .row{ display:flex; gap:8px; }
-  input[type="datetime-local"]{ flex:1; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:13px 12px; color:var(--text); font-size:16px; font-family:inherit; min-width:0; }
-  input[type="datetime-local"]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:0.7; }
-  .btn-now{ background:var(--panel-2); border:1px solid var(--line); color:var(--amber); border-radius:10px; padding:0 16px; font-size:14px; font-weight:600; font-family:inherit; white-space:nowrap; }
+  .header-left p {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
 
-  .chips{ display:flex; flex-wrap:wrap; gap:8px; }
-  .chip{ flex:1 1 calc(50% - 8px); background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:13px 10px; font-size:14px; font-weight:600; font-family:inherit; text-align:center; line-height:1.25; }
-  .chip.selected{ background:linear-gradient(135deg, var(--flame-1), var(--flame-2)); border-color:transparent; color:#1A1000; }
-  #outroWrap{ margin-top:10px; display:none; }
-  #outroWrap.show{ display:block; }
+  .upload-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
 
-  textarea{ width:100%; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:13px 12px; color:var(--text); font-size:15px; font-family:inherit; resize:vertical; min-height:70px; }
-  textarea::placeholder, input::placeholder{ color:var(--muted); }
+  .upload-btn {
+    background: var(--surface2);
+    border: 1px dashed var(--accent);
+    color: var(--accent);
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
-  .field-error{ color:var(--flame-1); font-size:12px; font-weight:600; margin-top:6px; display:none; }
+  .upload-btn:hover {
+    background: rgba(0,229,160,0.1);
+    border-style: solid;
+  }
 
-  .footer-bar{ position:fixed; bottom:0; left:0; right:0; padding:14px 16px calc(14px + env(safe-area-inset-bottom)); background:linear-gradient(180deg, rgba(20,23,26,0) 0%, var(--bg) 30%); }
-  #submitBtn{ width:100%; max-width:560px; margin:0 auto; display:block; background:linear-gradient(135deg, var(--flame-1), var(--flame-2)); color:#1A1000; border:none; border-radius:14px; padding:17px; font-size:17px; font-weight:700; font-family:'Barlow Condensed', sans-serif; letter-spacing:0.5px; text-transform:uppercase; box-shadow:0 6px 20px rgba(255,122,26,0.25); }
-  #submitBtn:disabled{ opacity:0.5; }
+  .upload-status {
+    font-size: 11px;
+    color: var(--muted);
+  }
 
-  /* histórico */
-  .hist-actions{ display:flex; gap:8px; margin-bottom:16px; }
-  .btn-download{ flex:1; background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:12px; font-size:13px; font-weight:600; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:6px; }
-  .btn-download.primary{ background:linear-gradient(135deg, var(--flame-1), var(--flame-2)); color:#1A1000; border-color:transparent; }
+  #fileInput { display: none; }
 
-  .summary{ display:flex; gap:10px; margin-bottom:16px; }
-  .summary-card{ flex:1; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px; text-align:center; }
-  .summary-card .num{ font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:22px; color:var(--amber); }
-  .summary-card .label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.3px; }
+  /* MAIN */
+  .main { padding: 24px 32px; }
 
-  .record{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:12px; }
-  .record-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; gap:10px; }
-  .record-motivo{ font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:16px; text-transform:uppercase; letter-spacing:0.2px; }
-  .record-duration{ background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:4px 10px; font-size:12px; font-weight:700; color:var(--ok); white-space:nowrap; }
-  .record-dates{ font-size:13px; color:var(--muted); line-height:1.6; }
-  .record-obs{ font-size:13px; color:var(--text); margin-top:8px; padding-top:8px; border-top:1px solid var(--line); }
-  .record-del{ margin-top:10px; background:none; border:none; color:var(--flame-1); font-size:12px; font-weight:600; font-family:inherit; padding:0; }
-  .empty{ text-align:center; color:var(--muted); font-size:14px; padding:40px 20px; }
+  /* KPI CARDS */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 14px;
+    margin-bottom: 24px;
+  }
 
-  #overlay{ position:fixed; inset:0; background:rgba(10,12,14,0.92); display:none; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:30px; z-index:50; }
-  #overlay.show{ display:flex; }
-  .check{ width:74px; height:74px; border-radius:50%; background:rgba(43,175,125,0.15); border:2px solid var(--ok); display:flex; align-items:center; justify-content:center; margin-bottom:18px; }
-  #overlay h2{ font-family:'Barlow Condensed', sans-serif; font-size:24px; text-transform:uppercase; margin:0 0 8px; }
-  #overlay p{ color:var(--muted); font-size:14px; margin:0 0 24px; max-width:280px; }
-  #overlay button{ background:var(--panel-2); border:1px solid var(--line); color:var(--text); padding:13px 26px; border-radius:10px; font-family:inherit; font-weight:600; font-size:14px; }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
 
-  #loadingMsg{ text-align:center; color:var(--muted); font-size:13px; padding:20px; display:none; }
+  .kpi-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+  }
+
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--kpi-color, var(--accent));
+  }
+
+  .kpi-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  .kpi-value {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .kpi-unit {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .kpi-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .kpi-sub .pos { color: var(--accent); }
+  .kpi-sub .neg { color: var(--accent4); }
+
+  /* PERIOD NAVIGATOR */
+  .period-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px 6px;
+  }
+  .period-nav-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 3px 5px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    transition: all 0.15s;
+  }
+  .period-nav-btn:hover { background: var(--surface2); color: var(--accent); }
+  .period-nav-label {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 120px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* FILTERS */
+  .filters-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 20px;
+    flex-wrap: wrap;
+  }
+
+  .filter-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .scale-btns {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 3px;
+  }
+
+  .scale-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 5px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    transition: all 0.2s;
+  }
+
+  .scale-btn.active {
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 600;
+  }
+
+  .divider { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+
+  .filter-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .filter-select:focus { border-color: var(--accent); }
+
+  /* SOURCE TOGGLE */
+  .source-btns {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 3px;
+  }
+
+  .source-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    transition: all 0.2s;
+  }
+
+  .source-btn.active-motor { background: var(--motor); color: white; }
+  .source-btn.active-flare { background: var(--flare); color: var(--bg); }
+  .source-btn.active-ambos { background: var(--accent); color: var(--bg); }
+  .source-btn.active-combined { background: #8b5cf6; color: white; }
+
+  /* CHARTS GRID */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+
+  .charts-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    position: relative;
+  }
+
+  .chart-card.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .chart-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .chart-sub {
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .chart-wrap {
+    position: relative;
+    height: 240px;
+  }
+
+  .chart-wrap-tall {
+    position: relative;
+    height: 300px;
+  }
+
+  .chart-wrap-short {
+    position: relative;
+    height: 200px;
+  }
+
+  /* RANKING */
+  .ranking-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+  }
+
+  .ranking-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 3px;
+    width: fit-content;
+  }
+
+  .rank-tab {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 5px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    transition: all 0.2s;
+  }
+
+  .rank-tab.active {
+    background: var(--accent2);
+    color: white;
+  }
+
+  .rank-list { display: flex; flex-direction: column; gap: 8px; }
+
+  /* SECTION HEADER */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    margin-top: 4px;
+  }
+
+  .section-header h2 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .section-line { flex: 1; height: 1px; background: var(--border); }
+
+  /* LOADING */
+  .loading {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(11,15,26,0.8);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .loading.show { display: flex; }
+
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading p { font-size: 13px; color: var(--accent); }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 10px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
+  }
+
+  /* Legend custom */
+  .legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+
+  .legend-line {
+    width: 16px; height: 2px;
+    border-radius: 1px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* PERIOD DROPDOWN */
+  .period-dropdown-wrap {
+    position: relative;
+  }
+
+  .period-dropdown-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    min-width: 180px;
+    justify-content: space-between;
+  }
+
+  .period-dropdown-btn:hover, .period-dropdown-btn.open {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .period-dropdown-btn svg {
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+
+  .period-dropdown-btn.open svg {
+    transform: rotate(180deg);
+  }
+
+  .period-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    z-index: 50;
+    min-width: 260px;
+    max-width: 400px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  .period-dropdown-menu.open {
+    display: block;
+  }
+
+  .period-dropdown-actions {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .period-dropdown-actions button {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 4px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+
+  .period-dropdown-actions button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .period-dropdown-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .period-chip {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 3px 10px;
+    border-radius: 16px;
+    cursor: pointer;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    transition: all 0.15s;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  .period-chip:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .period-chip.selected {
+    background: rgba(0,229,160,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* RANKING RICH */
+  .rank-list { display: flex; flex-direction: column; gap: 6px; }
+
+  .rank-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--bg);
+    border: 1px solid transparent;
+    border-radius: 10px;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .rank-item::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--rank-color, var(--border));
+    border-radius: 0 2px 2px 0;
+  }
+
+  .rank-item:hover {
+    background: var(--surface2);
+    border-color: var(--border);
+    transform: translateX(2px);
+  }
+
+  .rank-pos {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--muted);
+    width: 22px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .rank-pos.gold { color: #f59e0b; text-shadow: 0 0 8px rgba(245,158,11,0.5); }
+  .rank-pos.silver { color: #94a3b8; }
+  .rank-pos.bronze { color: #c08040; }
+
+  .rank-info { flex: 1; min-width: 0; }
+  .rank-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .rank-meta {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  .rank-bar-section { flex: 2; display: flex; flex-direction: column; gap: 3px; }
+  .rank-bar-wrap { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .rank-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.7s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .rank-val {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    width: 90px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .rank-unit {
+    font-size: 9px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .source-tag {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+    flex-shrink: 0;
+    letter-spacing: 0.3px;
+  }
+
+  /* DADOS TABLE */
+  #dadosTable th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  #dadosTable th:hover { color: var(--accent); }
+  #dadosTable th .sort-icon { margin-left: 4px; opacity: 0.4; }
+  #dadosTable th.sorted .sort-icon { opacity: 1; color: var(--accent); }
+
+  #dadosTable td {
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    white-space: nowrap;
+  }
+  #dadosTable tr:last-child td { border-bottom: none; }
+  #dadosTable tr:hover td { background: var(--surface2); }
+  #dadosTable td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  #dadosTable td.date { color: var(--accent); font-weight: 600; }
+  #dadosTable td.status-on  { color: #00e5a0; font-weight: 600; }
+  #dadosTable td.status-off { color: #ef4444; font-weight: 600; }
+
+  /* NAV TABS */
+  .nav-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 3px;
+  }
+  .nav-tab {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 6px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .nav-tab.active {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .nav-tab:hover:not(.active) { color: var(--text); }
+
+  /* IMPORT PAGE */
+  .import-page { display: none; padding: 32px; }
+  .import-page.active { display: block; }
+  .dashboard-page { display: block; }
+  .dashboard-page.hidden { display: none; }
+
+  .import-header {
+    margin-bottom: 28px;
+  }
+  .import-header h2 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .import-header p { font-size: 12px; color: var(--muted); }
+
+  .import-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .import-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    transition: border-color 0.2s;
+  }
+  .import-card:hover { border-color: var(--accent); }
+
+  .import-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .import-card-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .import-card-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .import-card-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 28px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(0,229,160,0.04);
+  }
+  .drop-zone input { display: none; }
+
+  .drop-zone-icon { font-size: 28px; margin-bottom: 10px; }
+  .drop-zone-text { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .drop-zone-text strong { color: var(--text); display: block; margin-bottom: 4px; font-size: 13px; }
+
+  .file-selected {
+    background: rgba(0,229,160,0.08);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    display: none;
+  }
+  .file-selected.show { display: flex; }
+  .file-selected-name { font-size: 12px; color: var(--accent); flex: 1; }
+  .file-selected-remove {
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 16px; padding: 0;
+    transition: color 0.15s;
+  }
+  .file-selected-remove:hover { color: var(--accent4); }
+
+  .import-preview {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 24px;
+    display: none;
+  }
+  .import-preview.show { display: block; }
+  .import-preview h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+
+  .preview-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .preview-kpi {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid var(--border);
+  }
+  .preview-kpi-label { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+  .preview-kpi-val { font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 700; color: var(--accent); }
+  .preview-kpi-unit { font-size: 9px; color: var(--muted); }
+
+  .preview-days {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .preview-day {
+    background: rgba(59,130,246,0.1);
+    border: 1px solid rgba(59,130,246,0.3);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--motor);
+    font-weight: 600;
+  }
+  .preview-day.flare {
+    background: rgba(245,158,11,0.1);
+    border-color: rgba(245,158,11,0.3);
+    color: var(--flare);
+  }
+
+  .import-actions { display: flex; gap: 12px; align-items: center; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  .import-log {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.8;
+    max-height: 160px;
+    overflow-y: auto;
+    margin-top: 16px;
+    display: none;
+  }
+  .import-log.show { display: block; }
+  .log-ok { color: var(--accent); }
+  .log-warn { color: var(--accent3); }
+  .log-info { color: var(--accent2); }
+
+  .history-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    margin-top: 24px;
+  }
+  .history-section h3 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .history-list { display: flex; flex-direction: column; gap: 6px; }
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: var(--bg);
+    border-radius: 8px;
+    font-size: 11px;
+  }
+  .history-week { color: var(--text); font-weight: 600; flex: 1; }
+  .history-counts { color: var(--muted); }
+  .history-date { color: var(--muted); font-size: 10px; }
+  .history-remove {
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 14px; padding: 0;
+    transition: color 0.15s;
+  }
+  .history-remove:hover { color: var(--accent4); }
+  /* ================================
+     NAVEGAÇÃO POR ÁREA (esconde abas até escolher Flare ou Gás)
+     ================================ */
+  .nav-tab[data-area]{ display:none; }
+  body[data-area="gas"] .nav-tab[data-area="gas"]{ display:flex; }
+  body[data-area="flare"] .nav-tab[data-area="flare"]{ display:flex; }
+  body[data-area="home"] #homeTabBtn{ display:none; }
+  #homeTabBtn{ display:flex; }
+
+  /* ================================
+     TELA INICIAL (HOME)
+     ================================ */
+  .home-page{ display:none; min-height:calc(100vh - 0px); align-items:center; justify-content:center; padding:24px; }
+  .home-page.active{ display:flex; }
+  .home-wrap{ max-width:720px; width:100%; text-align:center; }
+  .home-wrap h1{ font-family:'Montserrat',sans-serif; font-size:26px; font-weight:800; color:var(--accent); margin-bottom:6px; }
+  .home-wrap > p{ font-size:13px; color:var(--muted); margin-bottom:36px; }
+  .home-grid{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media (max-width:640px){ .home-grid{ grid-template-columns:1fr; } }
+  .home-card{ background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:36px 24px;
+    cursor:pointer; transition:all 0.2s; text-align:center; }
+  .home-card:hover{ transform:translateY(-3px); border-color:var(--accent); }
+  .home-card-icon{ font-size:44px; margin-bottom:16px; }
+  .home-card h2{ font-family:'Montserrat',sans-serif; font-size:17px; font-weight:700; color:var(--text); margin-bottom:8px; }
+  .home-card p{ font-size:12px; color:var(--muted); line-height:1.6; }
+  .home-card-tag{ display:inline-block; margin-top:14px; font-size:10px; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.4px; padding:4px 12px; border-radius:20px; }
+  .home-card.flare .home-card-tag{ background:rgba(245,158,11,0.12); color:var(--flare); border:1px solid rgba(245,158,11,0.3); }
+  .home-card.gas .home-card-tag{ background:rgba(0,229,160,0.12); color:var(--accent); border:1px solid rgba(0,229,160,0.3); }
+
+  /* ================================
+     GATE DE SENHA (edição dos dados de gás)
+     ================================ */
+  .auth-locked-msg{ text-align:center; padding:60px 20px; color:var(--muted); }
+
+  /* ---- Modal de dias duplicados ---- */
+  #overlapModal{ position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none;
+    align-items:center; justify-content:center; z-index:100; padding:20px; }
+  #overlapModal.show{ display:flex; }
+  .overlap-box{ background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    padding:28px; max-width:480px; width:100%; }
+  .overlap-box h3{ font-family:'Montserrat',sans-serif; font-size:17px; font-weight:700; color:var(--text); margin:0 0 10px; }
+  .overlap-box p{ font-size:13px; color:var(--muted); line-height:1.6; margin:0 0 14px; }
+  .overlap-days{ max-height:120px; overflow-y:auto; background:var(--bg); border:1px solid var(--border);
+    border-radius:10px; padding:10px 12px; font-size:12px; color:var(--text); margin-bottom:18px; }
+  .overlap-actions{ display:flex; flex-direction:column; gap:8px; }
+  .overlap-actions button{ width:100%; padding:13px; border-radius:10px; font-size:13px; font-weight:700;
+    font-family:'Montserrat',sans-serif; cursor:pointer; border:1px solid var(--border); }
+  #overlapReplace{ background:var(--flare); color:#1a1000; border-color:transparent; }
+  #overlapKeepOld{ background:var(--surface2); color:var(--text); }
+  #overlapCancel{ background:none; color:var(--muted); }
+  .auth-locked-msg button{ margin-top:16px; }
+
+  body[data-area="home"] .header{ display:none; }
+
+  /* ================================
+     MOBILE: header/nav responsivos
+     (o operador acessa Registrar/Histórico pelo celular)
+     ================================ */
+  @media (max-width: 720px) {
+    .header{ flex-direction:column; align-items:stretch; gap:12px; padding:16px 16px; }
+    .header-left{ text-align:center; }
+    .header > div{ flex-wrap:wrap; justify-content:center; gap:8px !important; }
+    .nav-tabs{ flex-wrap:wrap; justify-content:center; }
+    #uploadStatus{ display:none; }
+    .kpi-grid{ grid-template-columns:repeat(2,1fr); }
+    .import-grid{ grid-template-columns:1fr; }
+    .main{ padding:16px; }
+    .import-page{ padding:16px; }
+  }
+
+  /* ================================
+     REGISTRAR PARADA / HISTÓRICO
+     ================================ */
+  .flare-step{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; margin-bottom:16px; }
+  .flare-step-head{ display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+  .flare-step-num{ width:26px; height:26px; border-radius:7px; background:var(--surface2); border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center; font-family:'Montserrat',sans-serif; font-weight:700; font-size:13px; color:var(--flare); flex-shrink:0; }
+  .flare-step-title{ font-family:'Montserrat',sans-serif; font-weight:700; font-size:14px; text-transform:uppercase; letter-spacing:0.3px; color:var(--text); }
+  .flare-step-optional{ font-size:11px; color:var(--muted); margin-left:auto; text-transform:none; letter-spacing:0; }
+
+  .flare-row{ display:flex; gap:8px; }
+  .flare-input{ flex:1; background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:12px; color:var(--text);
+    font-size:15px; font-family:'Montserrat',sans-serif; min-width:0; }
+  .flare-input::-webkit-calendar-picker-indicator{ filter:invert(0.6); }
+  .flare-btn-now{ background:var(--surface2); border:1px solid var(--border); color:var(--flare); border-radius:10px; padding:0 16px; font-size:13px; font-weight:700; font-family:'Montserrat',sans-serif; white-space:nowrap; cursor:pointer; }
+
+  .flare-chips{ display:flex; flex-wrap:wrap; gap:8px; }
+  .flare-chip{ flex:1 1 calc(50% - 8px); background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:10px;
+    padding:12px 10px; font-size:13px; font-weight:600; font-family:'Montserrat',sans-serif; text-align:center; line-height:1.25; cursor:pointer; }
+  .flare-chip.selected{ background:var(--flare); border-color:transparent; color:#1a1000; }
+  #flareOutroWrap{ margin-top:10px; display:none; }
+  #flareOutroWrap.show{ display:block; }
+
+  .flare-textarea{ width:100%; background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:12px; color:var(--text);
+    font-size:14px; font-family:'Montserrat',sans-serif; resize:vertical; min-height:70px; }
+  .flare-error{ color:var(--accent4); font-size:11px; font-weight:600; margin-top:6px; display:none; }
+
+  .flare-submit{ width:100%; background:var(--flare); color:#1a1000; border:none; border-radius:12px; padding:16px; font-size:14px;
+    font-weight:700; font-family:'Montserrat',sans-serif; letter-spacing:0.4px; text-transform:uppercase; cursor:pointer; margin-top:4px; }
+  .flare-submit:disabled{ opacity:0.5; cursor:not-allowed; }
+
+  .flare-summary{ display:flex; gap:10px; margin-bottom:20px; }
+  .flare-summary-card{ flex:1; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px; text-align:center; }
+  .flare-summary-card .num{ font-family:'Montserrat',sans-serif; font-weight:700; font-size:22px; color:var(--flare); }
+  .flare-summary-card .label{ font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.4px; margin-top:2px; }
+
+  .flare-record{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:12px; }
+  .flare-record-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px; }
+  .flare-record-motivo{ font-family:'Montserrat',sans-serif; font-weight:700; font-size:14px; color:var(--text); }
+  .flare-record-duration{ background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:4px 10px; font-size:11px; font-weight:700; color:var(--accent); white-space:nowrap; }
+  .flare-record-dates{ font-size:12px; color:var(--muted); line-height:1.6; }
+  .flare-record-obs{ font-size:12px; color:var(--text); margin-top:8px; padding-top:8px; border-top:1px solid var(--border); }
+  .flare-record-del{ margin-top:10px; background:none; border:none; color:var(--accent4); font-size:11px; font-weight:700; font-family:'Montserrat',sans-serif; padding:0; cursor:pointer; }
+  .flare-empty{ text-align:center; color:var(--muted); font-size:13px; padding:40px 20px; }
 </style>
 </head>
-<body>
+<body data-area="home">
 
-<header>
-  <div class="brand">
-    <svg class="flame-icon" viewBox="0 0 24 24" fill="none">
-      <path d="M12 2C12 2 6 8 6 13a6 6 0 0012 0c0-2-1-3-1-3s0 2-1.5 2C14 12 15 9 13 6c0 2-1 3-2 3 0-2 1-4 1-7z" fill="url(#g)"/>
-      <defs><linearGradient id="g" x1="6" y1="2" x2="18" y2="19"><stop stop-color="#FFB020"/><stop offset="1" stop-color="#C44510"/></linearGradient></defs>
-    </svg>
-    <div>
-      <h1>Registro de Parada</h1>
-      <p>Flare &middot; Planta de Biogás</p>
-    </div>
-  </div>
-  <div class="tabs">
-    <button class="tab active" data-view="registrar">Registrar</button>
-    <button class="tab" data-view="historico">Histórico</button>
-  </div>
-</header>
-
-<main>
-
-  <div class="view active" id="view-registrar">
-    <form id="form">
-      <div class="step">
-        <div class="step-head"><div class="step-num">1</div><div class="step-title">Início da parada</div></div>
-        <div class="row">
-          <input type="datetime-local" id="inicio" required>
-          <button type="button" class="btn-now" data-target="inicio">Agora</button>
-        </div>
-        <div class="field-error" id="err-inicio">Preencha o início da parada</div>
-      </div>
-
-      <div class="step">
-        <div class="step-head"><div class="step-num">2</div><div class="step-title">Motivo da parada</div></div>
-        <div class="chips" id="motivoChips">
-          <button type="button" class="chip" data-value="Manutenção programada">Manutenção programada</button>
-          <button type="button" class="chip" data-value="Falha no sensor">Falha no sensor</button>
-          <button type="button" class="chip" data-value="Baixa pressão de biogás">Baixa pressão de biogás</button>
-          <button type="button" class="chip" data-value="Problema elétrico">Problema elétrico</button>
-          <button type="button" class="chip" data-value="Outro">Outro</button>
-        </div>
-        <div id="outroWrap"><textarea id="motivoOutro" placeholder="Descreva o motivo..."></textarea></div>
-        <div class="field-error" id="err-motivo">Selecione o motivo da parada</div>
-      </div>
-
-      <div class="step">
-        <div class="step-head"><div class="step-num">3</div><div class="step-title">Retorno ao funcionamento</div></div>
-        <div class="row">
-          <input type="datetime-local" id="retorno" required>
-          <button type="button" class="btn-now" data-target="retorno">Agora</button>
-        </div>
-        <div class="field-error" id="err-retorno">Preencha o retorno / deve ser depois do início</div>
-      </div>
-
-      <div class="step">
-        <div class="step-head"><div class="step-num">4</div><div class="step-title">Observações</div><div class="step-optional">opcional</div></div>
-        <textarea id="observacoes" placeholder="Alguma informação adicional..."></textarea>
-      </div>
-    </form>
-  </div>
-
-  <div class="view" id="view-historico">
-    <div class="hist-actions">
-      <button class="btn-download primary" id="downloadXlsx">⬇ Baixar Excel</button>
-      <button class="btn-download" id="downloadCsv">⬇ CSV</button>
-    </div>
-    <div class="summary">
-      <div class="summary-card"><div class="num" id="sumCount">0</div><div class="label">Paradas</div></div>
-      <div class="summary-card"><div class="num" id="sumTime">0h</div><div class="label">Tempo parado total</div></div>
-    </div>
-    <div id="loadingMsg">Carregando registros...</div>
-    <div id="recordsList"></div>
-  </div>
-
-</main>
-
-<div class="footer-bar" id="footerBar">
-  <button id="submitBtn">Registrar Parada</button>
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <p id="loadingMsg">Processando dados...</p>
 </div>
 
-<div id="overlay">
-  <div class="check"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5L20 6" stroke="#2BAF7D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-  <h2>Registrado!</h2>
-  <p>A parada do flare foi salva com sucesso.</p>
-  <button id="newEntryBtn">Novo registro</button>
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <h1>⚡ BIOGÁS DASHBOARD</h1>
+    <p id="dataRange">Carregando dados...</p>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="nav-tabs" id="navTabs">
+      <button class="nav-tab" onclick="goHome()" id="homeTabBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Início
+      </button>
+      <button class="nav-tab" data-area="gas" onclick="showPage('dashboard')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-tab" data-area="gas" onclick="showPage('import')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Importar Semana
+      </button>
+      <button class="nav-tab" data-area="gas" onclick="showPage('dados')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Dados Diários
+      </button>
+      <button class="nav-tab" data-area="flare" onclick="showPage('registrar')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C12 2 6 8 6 13a6 6 0 0012 0c0-2-1-3-1-3s0 2-1.5 2C14 12 15 9 13 6c0 2-1 3-2 3 0-2 1-4 1-7z"/></svg>
+        Registrar Parada
+      </button>
+      <button class="nav-tab" data-area="flare" onclick="showPage('historico')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        Histórico de Paradas
+      </button>
+    </div>
+    <span class="upload-status" id="uploadStatus">Base de dados local</span>
+    <button onclick="loadBiogasFromSheet(true)" title="Sincronizar com a planilha" style="
+      background:none;border:1px solid var(--border);color:var(--muted);
+      width:28px;height:28px;border-radius:6px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      transition:all 0.2s;flex-shrink:0;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+      </svg>
+    </button>
+    <button onclick="forceRecalcCER()" title="Recalcular CER" style="
+      background:none;border:1px solid var(--border);color:var(--muted);
+      width:28px;height:28px;border-radius:6px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      transition:all 0.2s;flex-shrink:0;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+    </button>
+  </div>
 </div>
+
+<!-- DADOS DIÁRIOS PAGE -->
+<div class="import-page" id="dadosPage">
+  <div class="import-header">
+    <h2>📋 Dados Diários Agregados</h2>
+    <p>Visualize e exporte os dados agregados por dia — Motor e Flare separadamente.</p>
+  </div>
+
+  <!-- Controls -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+    <div class="source-btns" id="dadosSourceBtns">
+      <button class="source-btn active-motor" onclick="setDadosSource('motor',this)">⚙️ Motor</button>
+      <button class="source-btn" onclick="setDadosSource('flare',this)">🔥 Flare</button>
+    </div>
+    <div class="divider"></div>
+    <input type="text" id="dadosSearch" placeholder="Filtrar por data..." oninput="renderDadosTable()"
+      style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 12px;
+             border-radius:8px;font-family:'Montserrat',sans-serif;font-size:11px;outline:none;width:160px;">
+    <div class="divider"></div>
+    <button class="btn-primary" onclick="exportDados()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Exportar Excel
+    </button>
+    <span id="dadosCount" style="font-size:11px;color:var(--muted)"></span>
+  </div>
+
+  <!-- Table -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+    <div style="overflow-x:auto">
+      <table id="dadosTable" style="width:100%;border-collapse:collapse;font-size:11px;font-family:'Montserrat',sans-serif">
+        <thead id="dadosHead"></thead>
+        <tbody id="dadosBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT PAGE -->
+<div class="import-page" id="importPage">
+  <div class="import-header">
+    <h2>📥 Importar Planilha Semanal</h2>
+    <p>Faça upload das planilhas brutas do Motor e Flare. Os dados serão agregados por dia e adicionados ao histórico automaticamente.</p>
+  </div>
+
+  <div class="import-grid">
+    <!-- MOTOR -->
+    <div class="import-card">
+      <div class="import-card-header">
+        <div class="import-card-icon" style="background:rgba(59,130,246,0.15)">🔧</div>
+        <div>
+          <div class="import-card-title">Planilha Motor</div>
+          <div class="import-card-sub">Arquivo .xlsm semanal do motogerador</div>
+        </div>
+      </div>
+      <label class="drop-zone" id="dropMotor" for="inputMotor">
+        <input type="file" id="inputMotor" accept=".xlsm,.xlsx" onchange="handleDropFile('motor', this)">
+        <div class="drop-zone-icon">⚙️</div>
+        <div class="drop-zone-text">
+          <strong>Clique ou arraste aqui</strong>
+          Setembro-semana-XX-YYYY-Motor.xlsm
+        </div>
+      </label>
+      <div class="file-selected" id="selectedMotor">
+        <span class="file-selected-name" id="selectedMotorName"></span>
+        <button class="file-selected-remove" onclick="clearFile('motor')">✕</button>
+      </div>
+    </div>
+
+    <!-- FLARE -->
+    <div class="import-card">
+      <div class="import-card-header">
+        <div class="import-card-icon" style="background:rgba(245,158,11,0.15)">🔥</div>
+        <div>
+          <div class="import-card-title">Planilha Flare</div>
+          <div class="import-card-sub">Arquivo .xlsm semanal do flare/tocha</div>
+        </div>
+      </div>
+      <label class="drop-zone" id="dropFlare" for="inputFlare">
+        <input type="file" id="inputFlare" accept=".xlsm,.xlsx" onchange="handleDropFile('flare', this)">
+        <div class="drop-zone-icon">🔥</div>
+        <div class="drop-zone-text">
+          <strong>Clique ou arraste aqui</strong>
+          Setembro-semana-XX-YYYY-Flare.xlsm
+        </div>
+      </label>
+      <div class="file-selected" id="selectedFlare">
+        <span class="file-selected-name" id="selectedFlareName"></span>
+        <button class="file-selected-remove" onclick="clearFile('flare')">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="import-preview" id="importPreview">
+    <h3>📊 Pré-visualização dos dados processados</h3>
+    <div class="preview-grid" id="previewKpis"></div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Dias que serão importados:</div>
+    <div class="preview-days" id="previewDays"></div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="import-actions">
+    <button class="btn-primary" id="btnImport" onclick="handleConfirmClick()" disabled>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      Confirmar Importação
+    </button>
+    <button class="btn-secondary" onclick="clearImport()">Limpar</button>
+    <span id="importMsg" style="font-size:11px;color:var(--muted)"></span>
+  </div>
+
+  <div class="import-log" id="importLog"></div>
+
+  <!-- HISTORY -->
+  <div class="history-section">
+    <h3>
+      <span>📁 Histórico de Importações</span>
+      <button class="btn-secondary" style="font-size:10px;padding:5px 12px" onclick="clearAllHistory()">Limpar tudo</button>
+    </h3>
+    <div class="history-list" id="historyList"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD PAGE -->
+<!-- MODAL: dias duplicados na importação -->
+<div id="overlapModal">
+  <div class="overlap-box">
+    <h3>⚠ Dias já importados antes</h3>
+    <p>Alguns dias desse arquivo já existem no histórico. O que você quer fazer?</p>
+    <div class="overlap-days" id="overlapDaysList"></div>
+    <div class="overlap-actions">
+      <button id="overlapReplace">Substituir (usar os dados novos)</button>
+      <button id="overlapKeepOld">Manter os antigos (ignorar os repetidos)</button>
+      <button id="overlapCancel">Cancelar importação</button>
+    </div>
+  </div>
+</div>
+
+<!-- HOME PAGE -->
+<div class="home-page active" id="homePage">
+  <div class="home-wrap">
+    <h1>⚡ Painel da Planta de Biogás</h1>
+    <p>Escolha o que você quer acessar</p>
+    <div class="home-grid">
+      <div class="home-card flare" onclick="enterArea('flare')">
+        <div class="home-card-icon">🔥</div>
+        <h2>Paradas do Flare</h2>
+        <p>Registrar uma nova parada e consultar o histórico. Ideal para uso no celular.</p>
+        <div class="home-card-tag">Operador · Celular</div>
+      </div>
+      <div class="home-card gas" onclick="enterArea('gas')">
+        <div class="home-card-icon">📊</div>
+        <h2>Dados do Biogás</h2>
+        <p>Dashboard, importação de planilhas e dados diários do Flare e Motogerador.</p>
+        <div class="home-card-tag">Gestão · Computador</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REGISTRAR PARADA PAGE -->
+<div class="import-page" id="registrarPage">
+  <div class="import-header">
+    <h2>🔥 Registro de Parada do Flare</h2>
+    <p>Preenchido pelo operador — cada registro é salvo direto na planilha do Google.</p>
+  </div>
+
+  <form id="flareForm" style="max-width:560px">
+    <div class="flare-step">
+      <div class="flare-step-head"><div class="flare-step-num">1</div><div class="flare-step-title">Início da parada</div></div>
+      <div class="flare-row">
+        <input type="datetime-local" class="flare-input" id="flareInicio" required>
+        <button type="button" class="flare-btn-now" data-target="flareInicio">Agora</button>
+      </div>
+      <div class="flare-error" id="flareErrInicio">Preencha o início da parada</div>
+    </div>
+
+    <div class="flare-step">
+      <div class="flare-step-head"><div class="flare-step-num">2</div><div class="flare-step-title">Motivo da parada</div></div>
+      <div class="flare-chips" id="flareMotivoChips">
+        <button type="button" class="flare-chip" data-value="Manutenção programada">Manutenção programada</button>
+        <button type="button" class="flare-chip" data-value="Falha no sensor">Falha no sensor</button>
+        <button type="button" class="flare-chip" data-value="Baixa pressão de biogás">Baixa pressão de biogás</button>
+        <button type="button" class="flare-chip" data-value="Problema elétrico">Problema elétrico</button>
+        <button type="button" class="flare-chip" data-value="Outro">Outro</button>
+      </div>
+      <div id="flareOutroWrap"><textarea class="flare-textarea" id="flareMotivoOutro" placeholder="Descreva o motivo..."></textarea></div>
+      <div class="flare-error" id="flareErrMotivo">Selecione o motivo da parada</div>
+    </div>
+
+    <div class="flare-step">
+      <div class="flare-step-head"><div class="flare-step-num">3</div><div class="flare-step-title">Retorno ao funcionamento</div></div>
+      <div class="flare-row">
+        <input type="datetime-local" class="flare-input" id="flareRetorno" required>
+        <button type="button" class="flare-btn-now" data-target="flareRetorno">Agora</button>
+      </div>
+      <div class="flare-error" id="flareErrRetorno">Preencha o retorno / deve ser depois do início</div>
+    </div>
+
+    <div class="flare-step">
+      <div class="flare-step-head"><div class="flare-step-num">4</div><div class="flare-step-title">Observações</div><div class="flare-step-optional">opcional</div></div>
+      <textarea class="flare-textarea" id="flareObservacoes" placeholder="Alguma informação adicional..."></textarea>
+    </div>
+
+    <button type="button" class="flare-submit" id="flareSubmitBtn">Registrar Parada</button>
+  </form>
+</div>
+
+<!-- HISTÓRICO DE PARADAS PAGE -->
+<div class="import-page" id="historicoPage">
+  <div class="import-header">
+    <h2>📜 Histórico de Paradas do Flare</h2>
+    <p>Registros vindos direto da planilha do Google — a mesma fonte usada pelo operador.</p>
+  </div>
+
+  <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+    <button class="btn-primary" id="flareDownloadXlsx">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Baixar Excel
+    </button>
+    <button class="btn-secondary" id="flareDownloadCsv">Baixar CSV</button>
+    <button class="btn-secondary" id="flareRefreshBtn">↻ Atualizar</button>
+  </div>
+
+  <div class="flare-summary">
+    <div class="flare-summary-card"><div class="num" id="flareSumCount">0</div><div class="label">Paradas</div></div>
+    <div class="flare-summary-card"><div class="num" id="flareSumTime">0h</div><div class="label">Tempo parado total</div></div>
+  </div>
+
+  <div id="flareLoadingMsg" style="text-align:center;color:var(--muted);font-size:13px;padding:20px;display:none">Carregando registros...</div>
+  <div id="flareRecordsList"></div>
+</div>
+
+<div class="dashboard-page hidden" id="dashboardPage">
+<!-- MAIN -->
+<div class="main">
+
+  <!-- KPI CARDS -->
+  <!-- Row 1: Vazão -->
+  <div style="margin-bottom:8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700">Vazão de Biogás</div>
+  <div class="kpi-grid" id="kpiGrid" style="margin-bottom:14px">
+    <div class="kpi-card" style="--kpi-color:#3b82f6">
+      <div class="kpi-label">Vazão Média Motor</div>
+      <div class="kpi-value" id="kpi-vazao-motor">—</div>
+      <div class="kpi-unit">Nm³/h</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#f59e0b">
+      <div class="kpi-label">Vazão Média Flare</div>
+      <div class="kpi-value" id="kpi-vazao-flare">—</div>
+      <div class="kpi-unit">Nm³/h</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#00e5a0">
+      <div class="kpi-label">Vazão CH₄ Motor</div>
+      <div class="kpi-value" id="kpi-ch4-motor">—</div>
+      <div class="kpi-unit">Nm³/h (vazão × %CH₄)</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#22d3ee">
+      <div class="kpi-label">Vazão CH₄ Flare</div>
+      <div class="kpi-value" id="kpi-ch4-flare">—</div>
+      <div class="kpi-unit">Nm³/h (vazão × %CH₄)</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#a78bfa">
+      <div class="kpi-label">CH₄ Médio Global</div>
+      <div class="kpi-value" id="kpi-metano">—</div>
+      <div class="kpi-unit">% (motor + flare)</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#fb923c">
+      <div class="kpi-label">O₂ Médio Global</div>
+      <div class="kpi-value" id="kpi-o2">—</div>
+      <div class="kpi-unit">% (motor + flare)</div>
+    </div>
+  </div>
+
+  <!-- Row 2: Operacional + CER -->
+  <div style="margin-bottom:8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700">Operacional &amp; Créditos de Carbono</div>
+  <div class="kpi-grid" style="margin-bottom:24px;grid-template-columns:repeat(5,1fr)">
+    <div class="kpi-card" style="--kpi-color:#ef4444">
+      <div class="kpi-label">Tempo Desligado Motor</div>
+      <div class="kpi-value" id="kpi-tempo-motor">—</div>
+      <div class="kpi-unit">horas totais</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#f59e0b">
+      <div class="kpi-label">Tempo Desligado Flare</div>
+      <div class="kpi-value" id="kpi-tempo-flare">—</div>
+      <div class="kpi-unit">horas totais</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#3b82f6">
+      <div class="kpi-label">CER Motor</div>
+      <div class="kpi-value" id="kpi-cer-motor">—</div>
+      <div class="kpi-unit">tCO₂eq</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#f59e0b">
+      <div class="kpi-label">CER Flare</div>
+      <div class="kpi-value" id="kpi-cer-flare">—</div>
+      <div class="kpi-unit">tCO₂eq</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:#00e5a0">
+      <div class="kpi-label">CER Total</div>
+      <div class="kpi-value" id="kpi-cer-total">—</div>
+      <div class="kpi-unit">tCO₂eq (motor + flare)</div>
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters-row">
+    <span class="filter-label">Escala:</span>
+    <div class="scale-btns">
+      <button class="scale-btn active" onclick="setScale('anual')">Anual</button>
+      <button class="scale-btn" onclick="setScale('mensal')">Mensal</button>
+      <button class="scale-btn" onclick="setScale('semanal')">Semanal</button>
+    </div>
+    <div class="divider"></div>
+    <span class="filter-label" id="periodLabel">Período:</span>
+    <div class="period-dropdown-wrap" id="periodDropdownWrap">
+      <button class="period-dropdown-btn" id="periodDropdownBtn" onclick="toggleDropdown()">
+        <span id="periodDropdownLabel">Todos os períodos</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="period-dropdown-menu" id="periodDropdownMenu">
+        <div class="period-dropdown-actions">
+          <button onclick="selectAllPeriods()">Todos</button>
+          <button onclick="clearAllPeriods()">Limpar</button>
+        </div>
+        <div class="period-dropdown-list" id="periodChips"></div>
+      </div>
+    </div>
+    <span id="selectedCount" style="font-size:11px;color:var(--accent);margin-left:4px"></span>
+    <div class="divider"></div>
+    <!-- Navigator arrows -->
+    <div class="period-nav" id="periodNav">
+      <button class="period-nav-btn" onclick="navigatePeriod(-1)" title="Anterior">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="period-nav-label" id="periodNavLabel">—</span>
+      <button class="period-nav-btn" onclick="navigatePeriod(1)" title="Próximo">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- SECTION: VAZÃO -->
+  <div class="section-header">
+    <h2>Vazão de Biogás</h2>
+    <div class="section-line"></div>
+  </div>
+
+  <div style="margin-bottom:18px">
+    <div class="chart-card full-width">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+        <div>
+          <div class="chart-title" id="vazaoChartTitle">Vazão Biogás — Motor e Flare + Qualidade do Gás</div>
+          <div class="chart-sub">Barras: Vazão média (Nm³/h) &nbsp;|&nbsp; Linhas: % Metano e O₂</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="filter-label">Exibir:</span>
+          <div class="source-btns" id="vazaoSourceBtns">
+            <button class="source-btn active-ambos" onclick="setVazaoSource('ambos',this)">Motor + Flare</button>
+            <button class="source-btn" onclick="setVazaoSource('motor',this)">Só Motor</button>
+            <button class="source-btn" onclick="setVazaoSource('flare',this)">Só Flare</button>
+            <button class="source-btn" onclick="setVazaoSource('combined',this)">Soma</button>
+          </div>
+        </div>
+      </div>
+      <div class="legend" style="margin-bottom:14px">
+        <div class="legend-item" id="leg-motor"><div class="legend-dot" style="background:#3b82f6"></div> Vazão Motor</div>
+        <div class="legend-item" id="leg-flare"><div class="legend-dot" style="background:#f59e0b"></div> Vazão Flare</div>
+        <div class="legend-item" id="leg-combined" style="display:none"><div class="legend-dot" style="background:#8b5cf6"></div> Soma Motor+Flare</div>
+        <div class="legend-item"><div class="legend-line" style="background:#00e5a0"></div> Metano (%)</div>
+        <div class="legend-item"><div class="legend-line" style="background:#fb923c"></div> O₂ (%)</div>
+      </div>
+      <div class="chart-wrap-tall"><canvas id="chartVazao"></canvas></div>
+    </div>
+  </div>
+
+  <!-- SECTION: COLETA -->
+  <div class="section-header">
+    <h2>Biogás Coletado</h2>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card full-width" id="cardBiogas">
+      <div class="chart-title" id="titleBiogas">Biogás Coletado — Motor vs Flare</div>
+      <div class="chart-sub">Volume acumulado (Nm³)</div>
+      <div class="chart-wrap-tall"><canvas id="chartBiogas"></canvas></div>
+    </div>
+  </div>
+
+  <!-- SECTION: OPERACIONAL -->
+  <div class="section-header">
+    <h2>Análise Operacional</h2>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="charts-grid-3">
+    <div class="chart-card">
+      <div class="chart-title">Tempo Desligado</div>
+      <div class="chart-sub">Minutos por período — Motor e Flare</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Motor</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> Flare</div>
+      </div>
+      <div class="chart-wrap"><canvas id="chartDesligado"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Temperatura Flare + Vazão Flare</div>
+      <div class="chart-sub">Linha: Temperatura biogás Flare (°C) &nbsp;|&nbsp; Barras: Vazão Flare (Nm³/h)</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> Vazão Flare</div>
+        <div class="legend-item"><div class="legend-line" style="background:#ef4444"></div> Temp. Flare (°C)</div>
+      </div>
+      <div class="chart-wrap"><canvas id="chartTemp"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Qualidade do Biogás + Vazão Total</div>
+      <div class="chart-sub">Linhas: Metano, O₂, CO₂ &nbsp;|&nbsp; Barras: Vazão Motor+Flare (Nm³/h)</div>
+      <div class="legend" style="flex-wrap:wrap">
+        <div class="legend-item"><div class="legend-line" style="background:#00e5a0"></div> Metano (%)</div>
+        <div class="legend-item"><div class="legend-line" style="background:#fb923c"></div> O₂ (%)</div>
+        <div class="legend-item"><div class="legend-line" style="background:#a78bfa;border-style:dashed"></div> CO₂ (%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div> Vazão Total</div>
+      </div>
+      <div class="chart-wrap"><canvas id="chartMetanoO2"></canvas></div>
+    </div>
+  </div>
+
+  <!-- SECTION: RANKING -->
+  <div class="section-header">
+    <h2>Rankings</h2>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="ranking-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="chart-title">Ranking por Período</div>
+          <div class="chart-sub">Top 10 — ordenado por valor</div>
+        </div>
+        <div class="ranking-tabs">
+          <button class="rank-tab active" onclick="setRankMetric('metano')">% Metano</button>
+          <button class="rank-tab" onclick="setRankMetric('vazao')">Vazão</button>
+          <button class="rank-tab" onclick="setRankMetric('biogas')">Coletado</button>
+        </div>
+      </div>
+      <div class="rank-list" id="rankList"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Distribuição Metano por Faixa</div>
+      <div class="chart-sub">Histograma de qualidade do gás</div>
+      <div class="chart-wrap"><canvas id="chartHistMetano"></canvas></div>
+    </div>
+  </div>
+
+</div>
+
+</div><!-- end dashboard-page -->
+
+<div class="footer">Dashboard Biogás • Dados das abas MOTOR e FLARE • Atualização: arraste um novo arquivo Excel</div>
 
 <script>
-  // URL do Apps Script (Google Sheets) — agora é a única fonte de dados do app
-  const API_URL = "https://script.google.com/macros/s/AKfycbzxC2nBSnYBX1a68we_Tc010d4cyk4P5s8XLv9EBG0bLDlnAgbp1rbpferQCwdTdW6y/exec";
+// ========================
+// EMBEDDED DATA
+// ========================
+const BUILTIN_DATA = [];
 
-  const inicioInput = document.getElementById('inicio');
-  const retornoInput = document.getElementById('retorno');
-  const chips = document.querySelectorAll('.chip');
-  const outroWrap = document.getElementById('outroWrap');
-  const motivoOutro = document.getElementById('motivoOutro');
-  let motivoSelecionado = null;
+// ========================
+// STATE
+// ========================
+let allData = BUILTIN_DATA;
+let scale = 'anual';
+let selectedPeriods = new Set();
+let vazaoSource = 'ambos';
+let rankMetric = 'metano';
+let charts = {};
 
-  // ---------- Tabs ----------
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-      tab.classList.add('active');
-      document.getElementById('view-' + tab.dataset.view).classList.add('active');
-      document.getElementById('footerBar').style.display = tab.dataset.view === 'registrar' ? 'block' : 'none';
-      if (tab.dataset.view === 'historico') loadRecords();
-    });
-  });
+// ========================
+// INIT
+// ========================
+function getDateRange() {
+  const dates = allData.map(d => d.d).sort();
+  return `Dados: ${dates[0]} → ${dates[dates.length-1]}`;
+}
 
-  // ---------- Formulário ----------
-  document.querySelectorAll('.btn-now').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const target = document.getElementById(btn.dataset.target);
-      const now = new Date();
-      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-      target.value = now.toISOString().slice(0,16);
-    });
-  });
+// ========================
+// FILE UPLOAD
+// ========================
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  showLoading(true);
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const wb = XLSX.read(ev.target.result, {type:'binary', cellDates:true});
+      const motorSheet = wb.Sheets['MOTOR'] || wb.Sheets[wb.SheetNames[0]];
+      const flareSheet = wb.Sheets['FLARE'] || wb.Sheets[wb.SheetNames[1]];
+      const motorRows = XLSX.utils.sheet_to_json(motorSheet, {raw:false});
+      const flareRows = XLSX.utils.sheet_to_json(flareSheet, {raw:false});
+      allData = parseRows(motorRows, 'motor').concat(parseRows(flareRows, 'flare'));
+      document.getElementById('uploadStatus').textContent = `✓ ${file.name}`;
+      document.getElementById('dataRange').textContent = getDateRange();
+      buildPeriodSelect();
+      updateAll();
+    } catch(err) {
+      alert('Erro ao ler o arquivo: ' + err.message);
+    }
+    showLoading(false);
+  };
+  reader.readAsBinaryString(file);
+}
 
-  chips.forEach(chip => {
-    chip.addEventListener('click', () => {
-      chips.forEach(c => c.classList.remove('selected'));
-      chip.classList.add('selected');
-      motivoSelecionado = chip.dataset.value;
-      outroWrap.classList.toggle('show', motivoSelecionado === 'Outro');
-      document.getElementById('err-motivo').style.display = 'none';
-    });
-  });
-
-  function showError(id, show){ document.getElementById('err-' + id).style.display = show ? 'block' : 'none'; }
-
-  function formatDuration(min){
-    const h = Math.floor(min / 60);
-    const m = min % 60;
-    return h + 'h ' + m + 'min';
-  }
-
-  document.getElementById('submitBtn').addEventListener('click', async () => {
-    let valid = true;
-    if (!inicioInput.value){ showError('inicio', true); valid = false; } else showError('inicio', false);
-    if (!motivoSelecionado || (motivoSelecionado === 'Outro' && !motivoOutro.value.trim())){ showError('motivo', true); valid = false; } else showError('motivo', false);
-    if (!retornoInput.value || (inicioInput.value && retornoInput.value <= inicioInput.value)){ showError('retorno', true); valid = false; } else showError('retorno', false);
-    if (!valid) return;
-
-    const motivoFinal = motivoSelecionado === 'Outro' ? motivoOutro.value.trim() : motivoSelecionado;
-
-    const payload = {
-      inicio: inicioInput.value,
-      motivo: motivoFinal,
-      retorno: retornoInput.value,
-      observacoes: document.getElementById('observacoes').value
+function parseRows(rows, src) {
+  return rows.map(row => {
+    const dateVal = row['Data'];
+    let dateStr = '';
+    if (dateVal) {
+      const d = new Date(dateVal);
+      if (!isNaN(d)) {
+        dateStr = d.toISOString().split('T')[0];
+      } else {
+        dateStr = String(dateVal).split(' ')[0];
+      }
+    }
+    const y = parseInt(dateStr.split('-')[0]);
+    const mParts = dateStr.split('-');
+    const month = mParts[0]+'-'+mParts[1];
+    const dt = new Date(dateStr);
+    const week = getISOWeekStr(dt);
+    const get = (keys) => {
+      for (const k of keys) {
+        const v = row[k];
+        if (v !== undefined && v !== '' && v !== null) return parseFloat(v) || 0;
+      }
+      return null;
     };
-
-    const submitBtn = document.getElementById('submitBtn');
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Salvando...';
-
-    try {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (data.status !== 'ok') throw new Error('resposta inesperada');
-      document.getElementById('overlay').classList.add('show');
-    } catch (e) {
-      alert('Não foi possível salvar o registro. Verifique a conexão e tente novamente.');
+    const r = {
+      d: dateStr, y, m: month, w: week, s: src,
+      v: get(['Vazão média (Nm³/h)']),
+      me: get(['Metano médio (%)']),
+      o: get(['Oxigênio médio (%)','Oxigenio médio (%)']),
+      b: get(['Biogás coletaddo (Nm³)','Biogás coletado (Nm³)']),
+      h: get(['Sulfeto de hidrogênio (ppm)','Sulfeto de hidrogênio médio (ppm)']),
+      co2: get(['Dióxido de carbono médio (%)']),
+      t: get(['Tempo desligado']) || 0,
+    };
+    if (src === 'motor') {
+      r.ta = get(['Temperatura antes do chiler (ºc)']);
+      r.td = get(['Temperatura depoisdo chiler (ºc)']);
+    } else {
+      r.tp = get(['Temperatura (ºC)']);
     }
+    return r;
+  }).filter(r => r.d && r.y > 2000);
+}
 
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Registrar Parada';
+function getISOWeekStr(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const mon = new Date(date);
+  mon.setDate(date.getDate() - (date.getDay() || 7) + 1);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  return mon.toISOString().split('T')[0] + '/' + sun.toISOString().split('T')[0];
+}
+
+// ========================
+// CONTROLS
+// ========================
+function setScale(s) {
+  scale = s;
+  document.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  buildPeriodSelect();
+  updateAll();
+}
+
+function setVazaoSource(s, btn) {
+  vazaoSource = s;
+  document.querySelectorAll('#vazaoSourceBtns .source-btn').forEach(b => {
+    b.classList.remove('active-motor','active-flare','active-ambos','active-combined');
   });
+  btn.classList.add('active-' + s);
+  document.getElementById('leg-motor').style.display = (s==='flare') ? 'none' : 'flex';
+  document.getElementById('leg-flare').style.display = (s==='motor'||s==='combined') ? 'none' : 'flex';
+  document.getElementById('leg-combined').style.display = (s==='combined') ? 'flex' : 'none';
+  const titles = {ambos:'Motor e Flare', motor:'Só Motor', flare:'Só Flare', combined:'Soma Motor+Flare'};
+  document.getElementById('vazaoChartTitle').textContent = 'Vazão Biogás — ' + titles[s] + ' + Qualidade do Gás';
+  updateVazaoChart();
+}
 
-  document.getElementById('newEntryBtn').addEventListener('click', () => {
-    document.getElementById('form').reset();
-    chips.forEach(c => c.classList.remove('selected'));
-    motivoSelecionado = null;
-    outroWrap.classList.remove('show');
-    document.getElementById('overlay').classList.remove('show');
+function setRankMetric(m) {
+  rankMetric = m;
+  document.querySelectorAll('.rank-tab').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  updateRanking();
+}
+
+function showLoading(v) {
+  document.getElementById('loading').classList.toggle('show', v);
+}
+
+// ========================
+// PERIOD CHIPS
+// ========================
+function buildPeriodSelect() {
+  const labelMap = {anual:'Anos', mensal:'Meses', semanal:'Semanas'};
+  document.getElementById('periodLabel').textContent = labelMap[scale] + ':';
+  selectedPeriods = new Set(getPeriodKeys());
+  renderChips();
+  updateDropdownLabel();
+  updateNavLabel();
+}
+
+function getPeriodKeys() {
+  const keys = new Set();
+  allData.forEach(d => {
+    if (scale === 'anual') keys.add(String(d.y));
+    else if (scale === 'mensal') keys.add(d.m);
+    else keys.add(d.w);
   });
+  return Array.from(keys).sort();
+}
 
-  // ---------- Histórico ----------
-  let cachedRecords = [];
+function selectAllPeriods() {
+  selectedPeriods = new Set(getPeriodKeys());
+  renderChips();
+  updateAll();
+}
 
-  async function loadRecords(){
-    const listEl = document.getElementById('recordsList');
-    const loadingEl = document.getElementById('loadingMsg');
-    loadingEl.style.display = 'block';
-    listEl.innerHTML = '';
+function clearAllPeriods() {
+  selectedPeriods = new Set();
+  renderChips();
+  updateAll();
+}
 
-    try {
-      const res = await fetch(API_URL, { method: 'GET' });
-      const data = await res.json();
-      const records = (data && data.records) ? data.records : [];
-      records.sort((a, b) => new Date(b.inicio) - new Date(a.inicio));
-      cachedRecords = records;
-      renderRecords(records);
-    } catch (e) {
-      listEl.innerHTML = '<div class="empty">Não foi possível carregar os registros. Verifique a conexão.</div>';
-    }
-    loadingEl.style.display = 'none';
+function updateNavLabel() {
+  const keys = getPeriodKeys();
+  const sel = [...selectedPeriods].sort();
+  const el = document.getElementById('periodNavLabel');
+  if (!el) return;
+  if (sel.length === 0 || sel.length === keys.length) {
+    el.textContent = 'Todos';
+  } else if (sel.length === 1) {
+    el.textContent = formatChipLabel(sel[0]);
+  } else {
+    el.textContent = `${formatChipLabel(sel[0])} … ${formatChipLabel(sel[sel.length-1])}`;
+  }
+}
+
+function navigatePeriod(dir) {
+  // dir: -1 (anterior) or +1 (próximo)
+  const keys = getPeriodKeys();
+  if (!keys.length) return;
+
+  const sel = [...selectedPeriods].sort();
+  let currentIdx;
+
+  if (sel.length === 0 || sel.length === keys.length) {
+    // All selected: start from first or last
+    currentIdx = dir === 1 ? -1 : keys.length;
+  } else {
+    // Find the anchor index (first selected period)
+    currentIdx = keys.indexOf(sel[0]);
   }
 
-  function renderRecords(records){
-    const listEl = document.getElementById('recordsList');
-    document.getElementById('sumCount').textContent = records.length;
-    const totalMin = records.reduce((sum, r) => sum + (Number(r.duracaoMin) || 0), 0);
-    document.getElementById('sumTime').textContent = formatDuration(totalMin);
+  const nextIdx = currentIdx + dir;
+  if (nextIdx < 0 || nextIdx >= keys.length) return;
 
-    if (records.length === 0){
-      listEl.innerHTML = '<div class="empty">Nenhuma parada registrada ainda.</div>';
-      return;
+  // Select only the single period at nextIdx
+  selectedPeriods = new Set([keys[nextIdx]]);
+  renderChips();
+  updateDropdownLabel();
+  updateNavLabel();
+  updateAll();
+}
+
+function toggleDropdown() {
+  const btn = document.getElementById('periodDropdownBtn');
+  const menu = document.getElementById('periodDropdownMenu');
+  const isOpen = menu.classList.contains('open');
+  menu.classList.toggle('open', !isOpen);
+  btn.classList.toggle('open', !isOpen);
+}
+
+document.addEventListener('click', (e) => {
+  const wrap = document.getElementById('periodDropdownWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('periodDropdownMenu')?.classList.remove('open');
+    document.getElementById('periodDropdownBtn')?.classList.remove('open');
+  }
+});
+
+function updateDropdownLabel() {
+  const keys = getPeriodKeys();
+  const sel = selectedPeriods.size;
+  const total = keys.length;
+  let label;
+  if (sel === 0 || sel === total) label = 'Todos os períodos';
+  else if (sel === 1) label = formatChipLabel([...selectedPeriods][0]);
+  else label = `${sel} de ${total} selecionados`;
+  const el = document.getElementById('periodDropdownLabel');
+  if (el) el.textContent = label;
+  const cnt = document.getElementById('selectedCount');
+  if (cnt) cnt.textContent = (sel > 0 && sel < total) ? `✓ ${sel} filtro${sel>1?'s':''}` : '';
+}
+
+function togglePeriod(key) {
+  if (selectedPeriods.has(key)) selectedPeriods.delete(key);
+  else selectedPeriods.add(key);
+  renderChips();
+  updateDropdownLabel();
+  updateNavLabel();
+  updateAll();
+}
+
+function renderChips() {
+  const container = document.getElementById('periodChips');
+  const keys = getPeriodKeys();
+  container.innerHTML = '';
+  keys.forEach(k => {
+    const chip = document.createElement('button');
+    chip.className = 'period-chip' + (selectedPeriods.has(k) ? ' selected' : '');
+    chip.textContent = formatChipLabel(k);
+    chip.onclick = (e) => { e.stopPropagation(); togglePeriod(k); };
+    container.appendChild(chip);
+  });
+}
+
+function selectAllPeriods() {
+  selectedPeriods = new Set(getPeriodKeys());
+  renderChips();
+  updateDropdownLabel();
+  updateNavLabel();
+  updateAll();
+}
+
+function clearAllPeriods() {
+  selectedPeriods = new Set();
+  renderChips();
+  updateDropdownLabel();
+  updateNavLabel();
+  updateAll();
+}
+
+function formatChipLabel(k) {
+  if (scale === 'anual') return k;
+  if (scale === 'mensal') {
+    const [y, m] = k.split('-');
+    const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    return months[parseInt(m)-1] + ' ' + y;
+  }
+  const parts = k.split('/');
+  if (parts.length === 2) {
+    const start = new Date(parts[0] + 'T00:00:00');
+    const dd = String(start.getDate()).padStart(2,'0');
+    const mo = String(start.getMonth()+1).padStart(2,'0');
+    const tmp = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate()));
+    const dayNum = tmp.getUTCDay() || 7;
+    tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+    const wk = Math.ceil((((tmp - yearStart) / 86400000) + 1) / 7);
+    return `S${String(wk).padStart(2,'0')} ${start.getFullYear()} (${dd}/${mo})`;
+  }
+  return k;
+}
+
+// ========================
+// DATA FILTERING
+// ========================
+function filteredData(src = null) {
+  const allKeys = getPeriodKeys();
+  const useAll = selectedPeriods.size === 0 || selectedPeriods.size === allKeys.length;
+  return allData.filter(d => {
+    const srcOk = src ? d.s === src : true;
+    let periodOk;
+    if (useAll) {
+      periodOk = true;
+    } else {
+      const key = scale === 'anual' ? String(d.y) : scale === 'mensal' ? d.m : d.w;
+      periodOk = selectedPeriods.has(key);
     }
+    return srcOk && periodOk;
+  });
+}
 
-    listEl.innerHTML = records.map(r => {
-      const dInicio = new Date(r.inicio);
-      const dRetorno = new Date(r.retorno);
-      const fmt = d => d.toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit'});
-      return `
-        <div class="record">
-          <div class="record-top">
-            <div class="record-motivo">${escapeHtml(r.motivo)}</div>
-            <div class="record-duration">${r.tempoParado || formatDuration(Number(r.duracaoMin)||0)}</div>
-          </div>
-          <div class="record-dates">
-            Início: ${fmt(dInicio)}<br>
-            Retorno: ${fmt(dRetorno)}
-          </div>
-          ${r.observacoes ? `<div class="record-obs">${escapeHtml(r.observacoes)}</div>` : ''}
-          <button class="record-del" data-id="${r.id}">Excluir registro</button>
-        </div>`;
-    }).join('');
+// keyFn: semanal → dia individual; mensal → mês; anual → ano
+function keyFn(d) {
+  if (scale === 'semanal') return d.d;
+  if (scale === 'anual') return String(d.y);
+  return d.m;
+}
 
-    listEl.querySelectorAll('.record-del').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (!confirm('Excluir este registro? Essa ação não pode ser desfeita.')) return;
-        btn.disabled = true;
-        btn.textContent = 'Excluindo...';
-        try {
-          await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'delete', id: btn.dataset.id })
-          });
-          loadRecords();
-        } catch (e) {
-          alert('Não foi possível excluir o registro.');
-          btn.disabled = false;
-          btn.textContent = 'Excluir registro';
+// Formata label do eixo X
+function fmtLabel(key) {
+  if (!key) return '';
+  if (scale === 'semanal') {
+    const parts = key.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  if (scale === 'mensal') {
+    const parts = key.split('-');
+    if (parts.length === 2) {
+      const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+      return months[parseInt(parts[1])-1] + '/' + parts[0];
+    }
+  }
+  return key;
+}
+
+// ========================
+// UPDATE ALL
+// ========================
+function updateAll() {
+  updateKPIs();
+  updateVazaoChart();
+  updateBiogasChart();
+  updateDesligadoChart();
+  updateTempChart();
+  updateMetanoO2Chart();
+  updateRanking();
+  updateHistMetano();
+}
+function updateVazaoCharts() { updateVazaoChart(); }
+
+// ========================
+// KPIs
+// ========================
+function updateKPIs() {
+  const motor = filteredData('motor');
+  const flare = filteredData('flare');
+  const allF  = filteredData();
+
+  // Vazão média por fonte
+  const vazaoMotor = avg(motor, d => d.v);
+  const vazaoFlare = avg(flare, d => d.v);
+
+  // Vazão CH4 = vazão × (CH4% / 100)
+  const ch4Motor = avg(motor, d => (d.v != null && d.me != null) ? d.v * (d.me / 100) : null);
+  const ch4Flare = avg(flare, d => (d.v != null && d.me != null) ? d.v * (d.me / 100) : null);
+
+  // Qualidade global
+  const metanoAvg = avg(allF, d => d.me);
+  const o2Avg     = avg(allF, d => d.o);
+
+  // Tempo desligado (em horas)
+  const tempoMotor = motor.reduce((s, d) => s + (d.t || 0), 0) / 60;
+  const tempoFlare = flare.reduce((s, d) => s + (d.t || 0), 0) / 60;
+
+  // CER — soma dos créditos diários
+  const cerMotor = motor.reduce((s, d) => s + (d.cer || 0), 0);
+  const cerFlare = flare.reduce((s, d) => s + (d.cer || 0), 0);
+  const cerTotal = cerMotor + cerFlare;
+
+  document.getElementById('kpi-vazao-motor').textContent  = fmtNum(vazaoMotor, 1);
+  document.getElementById('kpi-vazao-flare').textContent  = fmtNum(vazaoFlare, 1);
+  document.getElementById('kpi-ch4-motor').textContent    = fmtNum(ch4Motor, 1);
+  document.getElementById('kpi-ch4-flare').textContent    = fmtNum(ch4Flare, 1);
+  document.getElementById('kpi-metano').textContent       = fmtNum(metanoAvg, 1) + '%';
+  document.getElementById('kpi-o2').textContent           = fmtNum(o2Avg, 2) + '%';
+  document.getElementById('kpi-tempo-motor').textContent  = fmtNum(tempoMotor, 1);
+  document.getElementById('kpi-tempo-flare').textContent  = fmtNum(tempoFlare, 1);
+  document.getElementById('kpi-cer-motor').textContent    = fmtNum(cerMotor, 3);
+  document.getElementById('kpi-cer-flare').textContent    = fmtNum(cerFlare, 3);
+  document.getElementById('kpi-cer-total').textContent    = fmtNum(cerTotal, 3);
+}
+
+function avg(data, fn) {
+  const vals = data.map(fn).filter(v => v !== null && !isNaN(v));
+  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+}
+
+function fmtNum(n, dec = 0) {
+  if (n === null || isNaN(n)) return '—';
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
+// ========================
+// CHART HELPERS
+// ========================
+const TOOLTIP_CFG = {
+  backgroundColor: '#0d1829',
+  borderColor: '#00e5a0',
+  borderWidth: 1,
+  titleColor: '#e2e8f0',
+  bodyColor: '#94a3b8',
+  titleFont: {family:'Montserrat', size:12, weight:'600'},
+  bodyFont: {family:'Montserrat', size:11},
+  padding: 10,
+  displayColors: true,
+  boxWidth: 10, boxHeight: 10,
+  callbacks: {
+    label: (item) => {
+      const v = parseFloat(item.raw);
+      if (isNaN(v)) return null;
+      return ` ${item.dataset.label}: ${v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})}`;
+    }
+  }
+};
+
+const SCALE_X = {
+  ticks: { color:'#64748b', font:{family:'Montserrat',size:9}, maxRotation:45 },
+  grid: { color:'#1f2d45' }
+};
+const SCALE_Y = {
+  ticks: { color:'#64748b', font:{family:'Montserrat',size:9} },
+  grid: { color:'#1a2235' }
+};
+
+function baseOptions(extraOpts) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode:'index', intersect:false },
+    plugins: { legend:{display:false}, tooltip: TOOLTIP_CFG },
+    elements: { point: { radius:2, hoverRadius:6 } },
+    ...extraOpts
+  };
+}
+
+function groupBy(data, kfn, valFns) {
+  const map = new Map();
+  data.forEach(d => {
+    const k = kfn(d);
+    if (!map.has(k)) map.set(k, { count:0, sums:{}, cnts:{} });
+    const e = map.get(k);
+    e.count++;
+    for (const [name, fn] of Object.entries(valFns)) {
+      const v = fn(d);
+      if (v !== null && v !== undefined && !isNaN(v)) {
+        e.sums[name] = (e.sums[name]||0) + v;
+        e.cnts[name] = (e.cnts[name]||0) + 1;
+      }
+    }
+  });
+  const result = [];
+  map.forEach((e, k) => {
+    const r = { key:k, count:e.count };
+    for (const name of Object.keys(valFns)) {
+      r[name] = e.cnts[name] ? e.sums[name] / e.cnts[name] : null;
+      r[name+'_sum'] = e.sums[name] || 0;
+    }
+    result.push(r);
+  });
+  return result.sort((a,b) => a.key.localeCompare(b.key));
+}
+
+function mkChart(id, config) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id).getContext('2d'), config);
+}
+
+function mkFmtLabels(rawKeys) {
+  return rawKeys.map(k => fmtLabel(k));
+}
+
+function mkLine(id, rawKeys, datasets) {
+  const n = rawKeys.length;
+  datasets.forEach(ds => { ds.pointRadius = n > 60 ? 0 : 2; ds.hoverRadius = 6; });
+  mkChart(id, {
+    type:'line',
+    data: { labels: mkFmtLabels(rawKeys), datasets },
+    options: baseOptions({ scales: { x:SCALE_X, y:SCALE_Y } })
+  });
+}
+
+function mkBar(id, rawKeys, datasets) {
+  mkChart(id, {
+    type:'bar',
+    data: { labels: mkFmtLabels(rawKeys), datasets },
+    options: baseOptions({ scales: { x:SCALE_X, y:SCALE_Y } })
+  });
+}
+
+// ========================
+// VAZÃO CHART (UNIFIED)
+// ========================
+function updateVazaoChart() {
+  const motorData = filteredData('motor');
+  const flareData = filteredData('flare');
+  const mg = groupBy(motorData, keyFn, {v:d=>d.v, me:d=>d.me, o:d=>d.o});
+  const fg = groupBy(flareData, keyFn, {v:d=>d.v, me:d=>d.me, o:d=>d.o});
+
+  const rawKeys = [...new Set([...mg.map(r=>r.key),...fg.map(r=>r.key)])].sort();
+  const mMap = Object.fromEntries(mg.map(r=>[r.key,r]));
+  const fMap = Object.fromEntries(fg.map(r=>[r.key,r]));
+
+  const metanoLine = rawKeys.map(l => {
+    const vals = [mMap[l]?.me, fMap[l]?.me].filter(v=>v!=null);
+    return vals.length ? +(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : null;
+  });
+  const o2Line = rawKeys.map(l => {
+    const vals = [mMap[l]?.o, fMap[l]?.o].filter(v=>v!=null);
+    return vals.length ? +(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : null;
+  });
+
+  const datasets = [];
+  if (vazaoSource === 'ambos') {
+    datasets.push(
+      { label:'Vazão Motor', type:'bar',
+        data: rawKeys.map(l => mMap[l]?.v != null ? +mMap[l].v.toFixed(1) : null),
+        backgroundColor:'rgba(59,130,246,0.75)', borderColor:'#3b82f6', borderWidth:1, borderRadius:3, yAxisID:'y' },
+      { label:'Vazão Flare', type:'bar',
+        data: rawKeys.map(l => fMap[l]?.v != null ? +fMap[l].v.toFixed(1) : null),
+        backgroundColor:'rgba(245,158,11,0.75)', borderColor:'#f59e0b', borderWidth:1, borderRadius:3, yAxisID:'y' }
+    );
+  } else if (vazaoSource === 'motor') {
+    datasets.push(
+      { label:'Vazão Motor', type:'bar',
+        data: rawKeys.map(l => mMap[l]?.v != null ? +mMap[l].v.toFixed(1) : null),
+        backgroundColor:'rgba(59,130,246,0.75)', borderColor:'#3b82f6', borderWidth:1, borderRadius:3, yAxisID:'y' }
+    );
+  } else if (vazaoSource === 'flare') {
+    datasets.push(
+      { label:'Vazão Flare', type:'bar',
+        data: rawKeys.map(l => fMap[l]?.v != null ? +fMap[l].v.toFixed(1) : null),
+        backgroundColor:'rgba(245,158,11,0.75)', borderColor:'#f59e0b', borderWidth:1, borderRadius:3, yAxisID:'y' }
+    );
+  } else {
+    datasets.push(
+      { label:'Soma Motor+Flare', type:'bar',
+        data: rawKeys.map(l => {
+          const mv = mMap[l]?.v||0, fv = fMap[l]?.v||0;
+          return (mv+fv > 0) ? +(mv+fv).toFixed(1) : null;
+        }),
+        backgroundColor:'rgba(139,92,246,0.75)', borderColor:'#8b5cf6', borderWidth:1, borderRadius:3, yAxisID:'y' }
+    );
+  }
+
+  datasets.push(
+    { label:'Metano (%)', type:'line', data:metanoLine,
+      borderColor:'#00e5a0', yAxisID:'y1', tension:0.3, borderWidth:2,
+      borderDash:[4,3], pointRadius:0, hoverRadius:5, fill:false },
+    { label:'O₂ (%)', type:'line', data:o2Line,
+      borderColor:'#fb923c', yAxisID:'y1', tension:0.3, borderWidth:2,
+      borderDash:[2,2], pointRadius:0, hoverRadius:5, fill:false }
+  );
+
+  mkChart('chartVazao', {
+    type:'bar',
+    data: { labels: mkFmtLabels(rawKeys), datasets },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{display:false}, tooltip:TOOLTIP_CFG },
+      scales: {
+        x: SCALE_X,
+        y: { ...SCALE_Y, position:'left',
+             title:{display:true,text:'Vazão (Nm³/h)',color:'#64748b',font:{family:'Montserrat',size:9}} },
+        y1: { ...SCALE_Y, position:'right', grid:{display:false},
+              title:{display:true,text:'%',color:'#64748b',font:{family:'Montserrat',size:9}} }
+      }
+    }
+  });
+}
+
+// ========================
+// BIOGAS CHART
+// ========================
+function updateBiogasChart() {
+  const mg = groupBy(filteredData('motor'), keyFn, {b:d=>d.b});
+  const fg = groupBy(filteredData('flare'), keyFn, {b:d=>d.b});
+  const rawKeys = [...new Set([...mg.map(r=>r.key),...fg.map(r=>r.key)])].sort();
+  const mMap = Object.fromEntries(mg.map(r=>[r.key,r.b]));
+  const fMap = Object.fromEntries(fg.map(r=>[r.key,r.b]));
+
+  document.getElementById('titleBiogas').textContent = 'Biogás Coletado — Motor vs Flare';
+
+  mkBar('chartBiogas', rawKeys, [
+    { label:'Motor (Nm³)', data: rawKeys.map(l => mMap[l] != null ? +mMap[l].toFixed(0) : null),
+      backgroundColor:'rgba(59,130,246,0.7)', borderColor:'#3b82f6', borderWidth:1, borderRadius:3 },
+    { label:'Flare (Nm³)', data: rawKeys.map(l => fMap[l] != null ? +fMap[l].toFixed(0) : null),
+      backgroundColor:'rgba(245,158,11,0.7)', borderColor:'#f59e0b', borderWidth:1, borderRadius:3 }
+  ]);
+}
+
+// ========================
+// H2S CHART
+// ========================
+
+// ========================
+// TEMPO DESLIGADO
+// ========================
+function updateDesligadoChart() {
+  const mData = filteredData('motor');
+  const fData = filteredData('flare');
+  const mSums = new Map();
+  const fSums = new Map();
+  mData.forEach(d => { const k = keyFn(d); mSums.set(k, (mSums.get(k)||0) + (d.t||0)); });
+  fData.forEach(d => { const k = keyFn(d); fSums.set(k, (fSums.get(k)||0) + (d.t||0)); });
+  const rawKeys = [...new Set([...mSums.keys(), ...fSums.keys()])].sort();
+  const mVals = rawKeys.map(k => mSums.get(k) || 0);
+  const fVals = rawKeys.map(k => fSums.get(k) || 0);
+  mkBar('chartDesligado', rawKeys, [
+    { label:'Motor (min)', data: mVals,
+      backgroundColor:'rgba(59,130,246,0.7)', borderColor:'#3b82f6', borderWidth:1, borderRadius:3 },
+    { label:'Flare (min)', data: fVals,
+      backgroundColor:'rgba(245,158,11,0.7)', borderColor:'#f59e0b', borderWidth:1, borderRadius:3 }
+  ]);
+}
+
+// ========================
+// TEMPERATURA
+// ========================
+// ========================
+// TEMPERATURA FLARE + VAZÃO FLARE
+// ========================
+function updateTempChart() {
+  const fg = groupBy(filteredData('flare'), keyFn, {tp:d=>d.tp, v:d=>d.v});
+  const rawKeys = fg.map(r=>r.key).sort();
+  const fpMap  = Object.fromEntries(fg.map(r=>[r.key, r.tp]));
+  const fvMap  = Object.fromEntries(fg.map(r=>[r.key, r.v]));
+
+  const n = rawKeys.length;
+  const fmtLabels = mkFmtLabels(rawKeys);
+
+  if (charts['chartTemp']) charts['chartTemp'].destroy();
+  charts['chartTemp'] = new Chart(document.getElementById('chartTemp').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: fmtLabels,
+      datasets: [
+        { label:'Vazão Flare (Nm³/h)', type:'bar',
+          data: rawKeys.map(k => fvMap[k] != null ? +fvMap[k].toFixed(1) : null),
+          backgroundColor:'rgba(245,158,11,0.55)', borderColor:'#f59e0b',
+          borderWidth:1, borderRadius:3, yAxisID:'yVazao' },
+        { label:'Temp. Flare (°C)', type:'line',
+          data: rawKeys.map(k => fpMap[k] != null ? +fpMap[k].toFixed(1) : null),
+          borderColor:'#ef4444', backgroundColor:'transparent',
+          borderWidth:2, tension:0.3,
+          pointRadius: n > 60 ? 0 : 2, hoverRadius:6,
+          yAxisID:'yTemp' }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{display:false}, tooltip: TOOLTIP_CFG },
+      scales: {
+        x: SCALE_X,
+        yVazao: { type:'linear', position:'left',
+          ticks:{color:'#64748b', font:{family:'Montserrat',size:9}},
+          grid:{color:'#1a2235'},
+          title:{display:true, text:'Vazão (Nm³/h)', color:'#64748b', font:{family:'Montserrat',size:9}} },
+        yTemp: { type:'linear', position:'right',
+          ticks:{color:'#ef4444', font:{family:'Montserrat',size:9}},
+          grid:{display:false},
+          title:{display:true, text:'Temp (°C)', color:'#ef4444', font:{family:'Montserrat',size:9}} }
+      }
+    }
+  });
+}
+
+// ========================
+// METANO vs O2 SCATTER
+// ========================
+// ========================
+// QUALIDADE + VAZÃO TOTAL
+// ========================
+function updateMetanoO2Chart() {
+  const motorData = filteredData('motor');
+  const flareData = filteredData('flare');
+
+  const mg = groupBy(motorData, keyFn, {me:d=>d.me, o:d=>d.o, co2:d=>d.co2, v:d=>d.v});
+  const fg = groupBy(flareData, keyFn, {me:d=>d.me, o:d=>d.o, co2:d=>d.co2, v:d=>d.v});
+
+  const rawKeys = [...new Set([...mg.map(r=>r.key),...fg.map(r=>r.key)])].sort();
+  const mMap = Object.fromEntries(mg.map(r=>[r.key,r]));
+  const fMap = Object.fromEntries(fg.map(r=>[r.key,r]));
+
+  // Average quality lines (motor+flare combined)
+  const avgLine = (fld) => rawKeys.map(k => {
+    const vals = [mMap[k]?.[fld], fMap[k]?.[fld]].filter(v=>v!=null);
+    return vals.length ? +(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : null;
+  });
+
+  // Summed vazao bar (motor+flare)
+  const vazaoSum = rawKeys.map(k => {
+    const mv = mMap[k]?.v ?? 0;
+    const fv = fMap[k]?.v ?? 0;
+    return +(mv + fv).toFixed(1);
+  });
+
+  const n = rawKeys.length;
+  const ptRadius = n > 60 ? 0 : 2;
+
+  mkChart('chartMetanoO2', {
+    type: 'bar',
+    data: {
+      labels: mkFmtLabels(rawKeys),
+      datasets: [
+        // Bar: vazão total (background)
+        { label:'Vazão Total (Nm³/h)', type:'bar',
+          data: vazaoSum,
+          backgroundColor:'rgba(107,114,128,0.25)',
+          borderColor:'rgba(107,114,128,0.5)',
+          borderWidth:1, borderRadius:2,
+          yAxisID:'yVazao' },
+        // Lines: quality indicators
+        { label:'Metano (%)', type:'line',
+          data: avgLine('me'),
+          borderColor:'#00e5a0', backgroundColor:'transparent',
+          borderWidth:2, tension:0.3,
+          pointRadius:ptRadius, hoverRadius:6,
+          yAxisID:'yQual' },
+        { label:'O₂ (%)', type:'line',
+          data: avgLine('o'),
+          borderColor:'#fb923c', backgroundColor:'transparent',
+          borderWidth:2, tension:0.3, borderDash:[3,3],
+          pointRadius:ptRadius, hoverRadius:6,
+          yAxisID:'yQual' },
+        { label:'CO₂ (%)', type:'line',
+          data: avgLine('co2'),
+          borderColor:'#a78bfa', backgroundColor:'transparent',
+          borderWidth:2, tension:0.3, borderDash:[2,4],
+          pointRadius:ptRadius, hoverRadius:6,
+          yAxisID:'yQual' },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: { legend:{display:false}, tooltip: TOOLTIP_CFG },
+      scales: {
+        x: SCALE_X,
+        yVazao: {
+          type:'linear', position:'left',
+          ticks:{color:'#64748b', font:{family:'Montserrat',size:9}},
+          grid:{color:'#1a2235'},
+          title:{display:true, text:'Vazão (Nm³/h)', color:'#64748b', font:{family:'Montserrat',size:9}}
+        },
+        yQual: {
+          type:'linear', position:'right',
+          ticks:{color:'#64748b', font:{family:'Montserrat',size:9}},
+          grid:{display:false},
+          title:{display:true, text:'%', color:'#64748b', font:{family:'Montserrat',size:9}}
         }
+      }
+    }
+  });
+}
+
+// ========================
+// RANKING
+// ========================
+function updateRanking() {
+  const mg = groupBy(filteredData('motor'), keyFn, {v:d=>d.v, me:d=>d.me, b:d=>d.b});
+  const fg = groupBy(filteredData('flare'), keyFn, {v:d=>d.v, me:d=>d.me, b:d=>d.b});
+  const metricMap = {metano:'me', vazao:'v', biogas:'b'};
+  const fld = metricMap[rankMetric];
+  const unit = {metano:'%', vazao:'Nm³/h', biogas:'Nm³'}[rankMetric];
+  const dec = {metano:1, vazao:1, biogas:0}[rankMetric];
+  let items = [];
+  mg.forEach(r => { if(r[fld]!=null) items.push({key:r.key,val:r[fld],src:'motor'}); });
+  fg.forEach(r => { if(r[fld]!=null) items.push({key:r.key,val:r[fld],src:'flare'}); });
+  items.sort((a,b)=>b.val-a.val);
+  items = items.slice(0,10);
+  const maxVal = items[0]?.val || 1;
+  const minVal = items[items.length-1]?.val || 0;
+
+  const list = document.getElementById('rankList');
+  list.innerHTML = '';
+  items.forEach((item, i) => {
+    const pct = Math.max(8, (item.val/maxVal*100)).toFixed(1);
+    const posClass = i===0?'gold':i===1?'silver':i===2?'bronze':'';
+    const color = item.src==='motor' ? '#3b82f6' : '#f59e0b';
+    const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+    // pct relative to range for bar fill
+    const barPct = maxVal === minVal ? 100 : ((item.val-minVal)/(maxVal-minVal)*100).toFixed(1);
+    const el = document.createElement('div');
+    el.className = 'rank-item';
+    el.style.setProperty('--rank-color', color);
+    el.innerHTML = `
+      <div class="rank-pos ${posClass}">${medal || (i+1)}</div>
+      <div class="rank-info">
+        <div class="rank-name">${fmtLabel(item.key)}</div>
+        <div class="rank-meta"><span class="source-tag ${item.src}">${item.src.toUpperCase()}</span></div>
+      </div>
+      <div class="rank-bar-section">
+        <div class="rank-bar-wrap">
+          <div class="rank-bar" style="width:${barPct}%;background:linear-gradient(90deg,${color}99,${color})"></div>
+        </div>
+      </div>
+      <div class="rank-val">${fmtNum(item.val,dec)}<span class="rank-unit"> ${unit}</span></div>`;
+    list.appendChild(el);
+  });
+}
+
+// ========================
+// HIST METANO
+// ========================
+function updateHistMetano() {
+  const vals = filteredData().map(d=>d.me).filter(v=>v!=null&&!isNaN(v));
+  const bins = [0,20,30,40,50,55,60,65,70,80,100];
+  const rawLabels = bins.slice(0,-1).map((b,i)=>`${b}-${bins[i+1]}%`);
+  const counts = new Array(rawLabels.length).fill(0);
+  vals.forEach(v => {
+    for (let i=0; i<bins.length-1; i++) {
+      if (v>=bins[i] && v<bins[i+1]) { counts[i]++; break; }
+    }
+  });
+  const colors = bins.slice(0,-1).map(b =>
+    b>=60?'rgba(0,229,160,0.7)':b>=50?'rgba(59,130,246,0.7)':b>=30?'rgba(245,158,11,0.7)':'rgba(239,68,68,0.7)'
+  );
+  mkChart('chartHistMetano', {
+    type:'bar',
+    data: { labels: rawLabels, datasets:[{label:'Dias', data:counts, backgroundColor:colors, borderRadius:3, borderWidth:0}] },
+    options: baseOptions({ scales: {
+      x: { ticks:{color:'#64748b',font:{family:'Montserrat',size:9},maxRotation:0}, grid:{color:'#1f2d45'} },
+      y: SCALE_Y
+    }})
+  });
+}
+
+// ========================
+// PAGE NAVIGATION
+// ========================
+function showPage(page) {
+  document.getElementById('homePage').classList.toggle('active', page === 'home');
+  document.getElementById('dashboardPage').classList.toggle('hidden', page !== 'dashboard');
+  document.getElementById('importPage').classList.toggle('active', page === 'import');
+  document.getElementById('dadosPage').classList.toggle('active', page === 'dados');
+  document.getElementById('registrarPage').classList.toggle('active', page === 'registrar');
+  document.getElementById('historicoPage').classList.toggle('active', page === 'historico');
+  document.querySelectorAll('.nav-tab').forEach((b) => b.classList.remove('active'));
+  const activeBtn = document.querySelector(`.nav-tab[onclick="showPage('${page}')"]`);
+  if (activeBtn) activeBtn.classList.add('active');
+  if (page === 'import') renderHistory();
+  if (page === 'dados') renderDadosTable();
+  if (page === 'historico') loadFlareRecords();
+}
+
+function enterArea(area){
+  document.body.dataset.area = area;
+  showPage(area === 'flare' ? 'registrar' : 'dashboard');
+  if (area === 'gas') loadBiogasFromSheet(true);
+}
+
+function goHome(){
+  document.body.dataset.area = 'home';
+  showPage('home');
+}
+
+// ========================
+// IMPORT STATE
+// ========================
+let pendingMotor = null;
+let pendingFlare = null;
+
+function handleDropFile(type, input) {
+  if (!requireGasAuth()) return;
+  const file = input.files[0];
+  if (!file) return;
+  showLoading(true);
+  document.getElementById('loadingMsg').textContent = `Processando ${type==='motor'?'Motor':'Flare'}...`;
+  setTimeout(() => {
+    readAndAggregate(file, type)
+      .then(records => {
+        if (type === 'motor') {
+          pendingMotor = {file, records};
+          document.getElementById('selectedMotorName').textContent = file.name;
+          document.getElementById('selectedMotor').classList.add('show');
+        } else {
+          pendingFlare = {file, records};
+          document.getElementById('selectedFlareName').textContent = file.name;
+          document.getElementById('selectedFlare').classList.add('show');
+        }
+        log(`✓ ${file.name}: ${records.length} dias processados`, 'ok');
+        updatePreview();
+        showLoading(false);
+      })
+      .catch(err => {
+        log(`✗ Erro ao processar ${file.name}: ${err.message}`, 'warn');
+        showLoading(false);
       });
+  }, 50);
+}
+
+function clearFile(type) {
+  if (type === 'motor') {
+    pendingMotor = null;
+    document.getElementById('inputMotor').value = '';
+    document.getElementById('selectedMotor').classList.remove('show');
+  } else {
+    pendingFlare = null;
+    document.getElementById('inputFlare').value = '';
+    document.getElementById('selectedFlare').classList.remove('show');
+  }
+  updatePreview();
+}
+
+function clearImport() {
+  clearFile('motor'); clearFile('flare');
+  document.getElementById('importLog').innerHTML = '';
+  document.getElementById('importLog').classList.remove('show');
+  document.getElementById('importMsg').textContent = '';
+}
+
+// ========================
+// FILE READING & AGGREGATION
+// ========================
+async function readAndAggregate(file, type) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const wb = XLSX.read(ev.target.result, {type:'binary'});
+        const sheet = wb.Sheets['RELAT1'];
+        if (!sheet) throw new Error('Aba RELAT1 não encontrada.');
+        
+        // Auto-detect header row: find the row containing 'Data' and 'Hora'
+        // Some files have 3 title rows (rows 0-2) before the header, others start at row 0
+        const rawSheet = XLSX.utils.sheet_to_json(sheet, {raw:true, defval:null, header:1});
+        let headerRowIndex = 0;
+        for (let i = 0; i < Math.min(10, rawSheet.length); i++) {
+          const row = rawSheet[i];
+          if (Array.isArray(row)) {
+            const rowStr = row.map(v => String(v||'').toLowerCase());
+            if (rowStr.includes('data') && rowStr.some(v => v.includes('hora') || v.includes('nm³') || v.includes('nm3') || v.includes('metano'))) {
+              headerRowIndex = i;
+              break;
+            }
+          }
+        }
+        
+        // Read with detected header row
+        const rows = XLSX.utils.sheet_to_json(sheet, {raw:true, defval:null, range:headerRowIndex});
+        
+        if (!rows.length) throw new Error('Sem dados na aba RELAT1.');
+        
+        // Remove trailing blank row and MÉDIA summary row
+        const cleanRows = rows.filter(r => {
+          const dataVal = r['Data'];
+          if (dataVal === null || dataVal === undefined) return false;
+          const s = String(dataVal).trim().toUpperCase();
+          return s !== '' && !s.includes('MÉDIA') && !s.includes('MEDIA') && s !== 'DATA';
+        });
+        const records = type==='motor' ? aggregateMotor(cleanRows) : aggregateFlare(cleanRows);
+        resolve(records);
+      } catch(err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error('Erro ao ler arquivo.'));
+    reader.readAsBinaryString(file);
+  });
+}
+
+function parseRawDate(d) {
+  if (d === null || d === undefined) return null;
+  
+  // Excel serial number — raw:true returns date cells as integers (e.g. 46301 = 07/09/2026)
+  if (typeof d === 'number' && d > 40000 && d < 60000) {
+    const excelEpoch = new Date(1899, 11, 30); // Dec 30 1899
+    const date = new Date(excelEpoch.getTime() + Math.floor(d) * 86400000);
+    const y = date.getFullYear();
+    const m = String(date.getMonth()+1).padStart(2,'0');
+    const day = String(date.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+  
+  // String format: "07/set/2026" or "07/09/2026"
+  const months = {jan:'01',fev:'02',mar:'03',abr:'04',mai:'05',jun:'06',
+                  jul:'07',ago:'08',set:'09',out:'10',nov:'11',dez:'12'};
+  const s = String(d).trim();
+  const p = s.split('/');
+  if (p.length === 3) {
+    const m = months[p[1].toLowerCase().trim()] || p[1].trim().padStart(2,'0');
+    return `${p[2].trim()}-${m}-${p[0].trim().padStart(2,'0')}`;
+  }
+  if (s.match(/^\d{4}-\d{2}-\d{2}/)) return s.slice(0,10);
+  return null;
+}
+
+function getWeekStr(dateStr) {
+  const d = new Date(dateStr+'T12:00:00');
+  const day = d.getDay()||7;
+  const mon = new Date(d); mon.setDate(d.getDate()-day+1);
+  const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+  return mon.toISOString().split('T')[0]+'/'+sun.toISOString().split('T')[0];
+}
+
+function safeNum(v) {
+  if (v === null || v === undefined) return null;
+  // Already a number (raw:true returns floats directly)
+  if (typeof v === 'number') return isNaN(v) ? null : v;
+  const s = String(v).trim().replace(/\s/g,'');
+  if (!s || s === 'null') return null;
+  let clean = s;
+  // Handle thousand separators: detect which char is decimal vs thousand
+  const hasComma = clean.includes(',');
+  const hasDot   = clean.includes('.');
+  if (hasComma && hasDot) {
+    // Both present: last one is decimal separator
+    if (clean.lastIndexOf(',') > clean.lastIndexOf('.')) {
+      // "1.143,98" → BR format: dots are thousands, comma is decimal
+      clean = clean.replace(/\./g,'').replace(',','.');
+    } else {
+      // "1,143.98" → US format: commas are thousands, dot is decimal
+      clean = clean.replace(/,/g,'');
+    }
+  } else if (hasComma) {
+    // Only comma: if 1-2 digits after → decimal; else → thousand separator
+    const parts = clean.split(',');
+    if (parts.length === 2 && parts[1].length <= 2) {
+      clean = clean.replace(',','.');   // "1,98" → decimal
+    } else {
+      clean = clean.replace(/,/g,'');  // "1,143" → thousand
+    }
+  } else if (clean.split('.').length > 2) {
+    // Multiple dots → all are thousand separators: "1.143.456" → "1143456"
+    clean = clean.replace(/\./g,'');
+  }
+  const n = parseFloat(clean);
+  return isNaN(n) ? null : n;
+}
+
+function groupByDate(rows) {
+  const map = new Map();
+  rows.forEach(row => {
+    const raw = row['Data'];
+    if (raw === null || raw === undefined) return;
+    // Skip MÉDIA row (string) and empty
+    if (typeof raw === 'string') {
+      const s = raw.trim().toUpperCase();
+      if (!s || s.includes('MÉDIA') || s.includes('MEDIA') || s === 'DATA') return;
+    }
+    const d = parseRawDate(raw);
+    if (!d || d.includes('NaN')) return;
+    if (!map.has(d)) map.set(d,[]);
+    map.get(d).push(row);
+  });
+  return map;
+}
+
+function colAvg(rows, col, filterFn) {
+  if (!col) return null;
+  let vals = rows.map(r=>safeNum(r[col])).filter(v=>v!==null);
+  if (filterFn) vals = vals.filter(filterFn);
+  return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*100)/100 : null;
+}
+
+function colLast(rows, col) {
+  if (!col) return null;
+  for (let i=rows.length-1;i>=0;i--) {
+    const v=safeNum(rows[i][col]); if(v!==null) return v;
+  }
+  return null;
+}
+
+function findCol(cols, keywords) {
+  // Normalize: remove \n, extra spaces, lowercase
+  const norm = s => s.toLowerCase().replace(/\n/g,' ').replace(/\s+/g,' ').trim();
+  return cols.find(c => keywords.every(k => norm(c).includes(norm(k))));
+}
+
+function aggregateFlare(rows) {
+  const cols = Object.keys(rows[0]||{});
+
+  const cVazao   = cols.find(c => c.includes('Nm³/h'));
+  const cBiogas  = cols.find(c => c.includes('(Nm³)') && !c.includes('(Nm³/h)'));
+  const cTemp    = cols.find(c => /temperatura/i.test(c) && /tocha/i.test(c));
+  const cMetano  = cols.find(c => /metano/i.test(c));
+  const cO2      = cols.find(c => /oxig[êe]nio/i.test(c));
+  const cCO2     = cols.find(c => /di[oó]xido/i.test(c) || /carbono/i.test(c));
+  const cH2S     = cols.find(c => /sulfeto/i.test(c) || /\bppm\b/i.test(c));
+  const cStatus  = cols.find(c => /status/i.test(c));
+
+  const records = [];
+  groupByDate(rows).forEach((dayRows, date) => {
+    // Minutos sem dado (vazão nula) = sem comunicação = considera como parado
+    const minsSemDado = cVazao
+      ? dayRows.filter(r => safeNum(r[cVazao]) === null).length
+      : 0;
+    const desligado = cStatus
+      ? dayRows.filter(r => String(r[cStatus]).toLowerCase().includes('desligado')).length
+      : 0;
+    const des = desligado + minsSemDado;
+
+    // Minutos com dado real = linhas onde vazão não é nula
+    // (linhas sem comunicação existem no arquivo mas com valores nulos)
+    const minsComDado = dayRows.length - minsSemDado;
+    const validRows = dayRows.filter(r => {
+      const v = safeNum(r[cVazao]);
+      const t = safeNum(r[cTemp]);
+      return v !== null && t !== null && v >= 350 && v <= 1200 && t > 650;
     });
-  }
+    const horasValidas = validRows.length / 60;
 
-  function escapeHtml(str){
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
+    // Médias diárias: todos os minutos com dado válido (não nulo)
+    const allWithVazao = dayRows.map(r => safeNum(r[cVazao])).filter(v => v !== null);
+    const allWithCh4   = dayRows.map(r => safeNum(r[cMetano])).filter(v => v !== null);
+    const vazaoMediaDia = allWithVazao.length ? allWithVazao.reduce((a,b)=>a+b,0) / allWithVazao.length : 0;
+    const ch4MedioDia   = allWithCh4.length   ? allWithCh4.reduce((a,b)=>a+b,0)   / allWithCh4.length   : 0;
 
-  function buildTableData(){
-    return cachedRecords.map(r => ({
-      'Início da parada': new Date(r.inicio).toLocaleString('pt-BR'),
-      'Motivo': r.motivo,
-      'Retorno ao funcionamento': new Date(r.retorno).toLocaleString('pt-BR'),
-      'Tempo parado': r.tempoParado || formatDuration(Number(r.duracaoMin)||0),
-      'Observações': r.observacoes || ''
-    }));
-  }
+    const cer = horasValidas > 0
+      ? horasValidas * vazaoMediaDia * (ch4MedioDia / 100) * 0.715 / 1000 * 28 * 0.80
+      : 0;
 
-  document.getElementById('downloadXlsx').addEventListener('click', () => {
-    if (cachedRecords.length === 0){ alert('Ainda não há registros para exportar.'); return; }
-    const ws = XLSX.utils.json_to_sheet(buildTableData());
-    ws['!cols'] = [{wch:18},{wch:26},{wch:22},{wch:14},{wch:30}];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Paradas do Flare');
-    XLSX.writeFile(wb, 'paradas_flare_' + new Date().toISOString().slice(0,10) + '.xlsx');
+    records.push({
+      d:date, y:parseInt(date.slice(0,4)), m:date.slice(0,7), w:getWeekStr(date), s:'flare',
+      v:   colAvg(dayRows, cVazao),
+      b:   colLast(dayRows, cBiogas),
+      tp:  colAvg(dayRows, cTemp),
+      me:  colAvg(dayRows, cMetano),
+      o:   colAvg(dayRows, cO2, v => v <= 5),
+      co2: colAvg(dayRows, cCO2),
+      h:   colAvg(dayRows, cH2S),
+      t:   des,
+      mins: minsComDado,
+      cer: Math.round(cer * 1000) / 1000,
+      hcer: Math.round(horasValidas * 10) / 10,
+    });
+  });
+  return records.sort((a,b) => a.d.localeCompare(b.d));
+}
+
+function aggregateMotor(rows) {
+  const cols = Object.keys(rows[0]||{});
+
+  const cVazao   = cols.find(c => c.includes('Nm³/h'));
+  const cBiogas  = cols.find(c => c.includes('(Nm³)') && !c.includes('(Nm³/h)'));
+  const cTempA   = cols.find(c => /temperatura/i.test(c) && /antes/i.test(c));
+  const cTempD   = cols.find(c => /temperatura/i.test(c) && /depois/i.test(c));
+  const cMetano  = cols.find(c => /metano/i.test(c));
+  const cO2      = cols.find(c => /oxig[êe]nio/i.test(c));
+  const cCO2     = cols.find(c => /di[oó]xido/i.test(c) || /carbono/i.test(c));
+  const cH2S     = cols.find(c => /sulfeto/i.test(c));
+  const cGen     = cols.find(c => /gera[çc][aã]o/i.test(c) || /mwh/i.test(c));
+  const cStatus  = cols.find(c => /status/i.test(c));
+
+  const records = [];
+  groupByDate(rows).forEach((dayRows, date) => {
+    // Minutos sem dado (vazão nula) = sem comunicação = considera como parado
+    const minsSemDado = cVazao
+      ? dayRows.filter(r => safeNum(r[cVazao]) === null).length
+      : 0;
+    const desligado = cStatus
+      ? dayRows.filter(r => String(r[cStatus]).toLowerCase().includes('desligado')).length
+      : 0;
+    const des = desligado + minsSemDado;
+    // Geração acumulada do medidor — pega o último valor registrado do dia (ideal: 23:59),
+    // não a diferença entre início e fim do dia.
+    const gen = cGen ? colLast(dayRows, cGen) : null;
+
+    // Minutos com dado real = linhas onde vazão não é nula
+    const minsComDado = dayRows.length - minsSemDado;
+
+    // CER Motor: horas válidas = minutos com dado E status Ligado
+    const validRows = cStatus
+      ? dayRows.filter(r => safeNum(r[cVazao]) !== null && !String(r[cStatus]).toLowerCase().includes('desligado'))
+      : dayRows.filter(r => safeNum(r[cVazao]) !== null);
+    const horasValidas = validRows.length / 60;
+
+    // Médias diárias: todos os minutos com dado válido (não nulo)
+    const allWithVazao = dayRows.map(r => safeNum(r[cVazao])).filter(v => v !== null);
+    const allWithCh4   = dayRows.map(r => safeNum(r[cMetano])).filter(v => v !== null);
+    const vazaoMediaDia = allWithVazao.length ? allWithVazao.reduce((a,b)=>a+b,0) / allWithVazao.length : 0;
+    const ch4MedioDia   = allWithCh4.length   ? allWithCh4.reduce((a,b)=>a+b,0)   / allWithCh4.length   : 0;
+
+    const cer = horasValidas > 0
+      ? horasValidas * vazaoMediaDia * (ch4MedioDia / 100) * 0.715 / 1000 * 28 * 0.80
+      : 0;
+
+    records.push({
+      d:date, y:parseInt(date.slice(0,4)), m:date.slice(0,7), w:getWeekStr(date), s:'motor',
+      v:   colAvg(dayRows, cVazao),
+      b:   colLast(dayRows, cBiogas),
+      ta:  colAvg(dayRows, cTempA),
+      td:  colAvg(dayRows, cTempD),
+      me:  colAvg(dayRows, cMetano),
+      o:   colAvg(dayRows, cO2, v => v <= 5),
+      co2: colAvg(dayRows, cCO2),
+      h:   colAvg(dayRows, cH2S),
+      gen,
+      t:   des,
+      mins: minsComDado,
+      cer: Math.round(cer * 1000) / 1000,
+      hcer: Math.round(horasValidas * 10) / 10,
+    });
+  });
+  return records.sort((a,b) => a.d.localeCompare(b.d));
+}
+
+// ========================
+// PREVIEW
+// ========================
+function updatePreview() {
+  const hasData = !!(pendingMotor||pendingFlare);
+  document.getElementById('importPreview').classList.toggle('show', hasData);
+  document.getElementById('btnImport').disabled = !hasData;
+  if (!hasData) return;
+
+  const allRecs = [...(pendingMotor?.records||[]),...(pendingFlare?.records||[])];
+  const motorRecs = allRecs.filter(r=>r.s==='motor');
+  const flareRecs = allRecs.filter(r=>r.s==='flare');
+  const days = [...new Set(allRecs.map(r=>r.d))].sort();
+  const avgMe = recs => {
+    const v=recs.map(r=>r.me).filter(v=>v!=null);
+    return v.length?(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):'—';
+  };
+  const fmt = d => d.split('-').reverse().join('/');
+
+  document.getElementById('previewKpis').innerHTML = `
+    <div class="preview-kpi"><div class="preview-kpi-label">Período</div>
+      <div class="preview-kpi-val" style="font-size:13px">${fmt(days[0])} → ${fmt(days[days.length-1])}</div>
+      <div class="preview-kpi-unit">${days.length} dias</div></div>
+    <div class="preview-kpi"><div class="preview-kpi-label">Metano Motor</div>
+      <div class="preview-kpi-val">${avgMe(motorRecs)}%</div>
+      <div class="preview-kpi-unit">média</div></div>
+    <div class="preview-kpi"><div class="preview-kpi-label">Metano Flare</div>
+      <div class="preview-kpi-val">${avgMe(flareRecs)}%</div>
+      <div class="preview-kpi-unit">média</div></div>
+    <div class="preview-kpi"><div class="preview-kpi-label">Registros</div>
+      <div class="preview-kpi-val">${allRecs.length}</div>
+      <div class="preview-kpi-unit">M:${motorRecs.length} F:${flareRecs.length}</div></div>`;
+
+  const dc = document.getElementById('previewDays');
+  dc.innerHTML = '';
+  days.forEach(d => {
+    if (motorRecs.some(r=>r.d===d)) {
+      const el=document.createElement('span');
+      el.className='preview-day';el.textContent=fmt(d)+' (M)';dc.appendChild(el);
+    }
+    if (flareRecs.some(r=>r.d===d)) {
+      const el=document.createElement('span');
+      el.className='preview-day flare';el.textContent=fmt(d)+' (F)';dc.appendChild(el);
+    }
+  });
+}
+
+// ========================
+// CONFIRM IMPORT
+// ========================
+// ========================
+// DETECÇÃO DE DIAS JÁ IMPORTADOS (evita duplicar/substituir sem avisar)
+// ========================
+function getOverlappingDays(){
+  let stored = [];
+  try { const r = localStorage.getItem('biogas_history'); if (r) stored = JSON.parse(r); } catch(e){}
+  const storedKeys = new Set(stored.map(r => r.d + '|' + r.s));
+
+  const novos = [...(pendingMotor?.records||[]), ...(pendingFlare?.records||[])];
+  const overlap = novos.filter(r => storedKeys.has(r.d + '|' + r.s));
+  return overlap;
+}
+
+function handleConfirmClick(){
+  const overlap = getOverlappingDays();
+  if (overlap.length === 0) { confirmImport(); return; }
+
+  const fmt = d => d.split('-').reverse().join('/');
+  const listEl = document.getElementById('overlapDaysList');
+  listEl.innerHTML = overlap
+    .sort((a,b)=>a.d.localeCompare(b.d))
+    .map(r => `${fmt(r.d)} (${r.s === 'motor' ? 'Motor' : 'Flare'})`)
+    .join('<br>');
+
+  document.getElementById('overlapModal').classList.add('show');
+}
+
+document.getElementById('overlapCancel').addEventListener('click', () => {
+  document.getElementById('overlapModal').classList.remove('show');
+});
+
+document.getElementById('overlapReplace').addEventListener('click', () => {
+  document.getElementById('overlapModal').classList.remove('show');
+  confirmImport(); // comportamento padrão: os dados novos substituem os antigos
+});
+
+document.getElementById('overlapKeepOld').addEventListener('click', () => {
+  document.getElementById('overlapModal').classList.remove('show');
+  const overlap = getOverlappingDays();
+  const overlapKeys = new Set(overlap.map(r => r.d + '|' + r.s));
+  // remove dos pendentes os dias que já existem, mantendo só os genuinamente novos
+  if (pendingMotor) pendingMotor.records = pendingMotor.records.filter(r => !overlapKeys.has(r.d+'|'+r.s));
+  if (pendingFlare) pendingFlare.records = pendingFlare.records.filter(r => !overlapKeys.has(r.d+'|'+r.s));
+  if (!pendingMotor?.records?.length && !pendingFlare?.records?.length) {
+    log('Nenhum dia novo pra importar — todos já existiam e foram mantidos como estavam.', 'info');
+    clearImport();
+    return;
+  }
+  confirmImport();
+});
+
+function confirmImport() {
+  const newRecs = [...(pendingMotor?.records||[]),...(pendingFlare?.records||[])];
+  if (!newRecs.length) return;
+
+  let stored = [];
+  try { const r=localStorage.getItem('biogas_history'); if(r) stored=JSON.parse(r); } catch(e){}
+
+  const newKeys = new Set(newRecs.map(r=>r.d+'|'+r.s));
+  const merged = stored.filter(r=>!newKeys.has(r.d+'|'+r.s)).concat(newRecs);
+  merged.sort((a,b)=>a.d.localeCompare(b.d)||a.s.localeCompare(b.s));
+
+  try { localStorage.setItem('biogas_history', JSON.stringify(merged)); }
+  catch(e) { log('⚠ Erro ao salvar: '+e.message,'warn'); return; }
+
+  const importLog = JSON.parse(localStorage.getItem('biogas_import_log')||'[]');
+  importLog.unshift({
+    ts: new Date().toISOString(),
+    motorFile: pendingMotor?.file?.name||null,
+    flareFile: pendingFlare?.file?.name||null,
+    days: [...new Set(newRecs.map(r=>r.d))].sort(),
+    count: newRecs.length,
+  });
+  localStorage.setItem('biogas_import_log', JSON.stringify(importLog.slice(0,50)));
+
+  log(`✓ ${newRecs.length} registros importados com sucesso!`, 'ok');
+  log(`📊 Total no histórico: ${merged.length} registros`, 'info');
+  document.getElementById('importMsg').textContent = '✓ Importado! Dashboard atualizado. Enviando pra planilha compartilhada...';
+
+  // Envia os dados já processados pra planilha do Google Sheets (banco de dados compartilhado)
+  const sends = [];
+  if (pendingMotor?.records?.length) sends.push(sendRecordsToSheet(pendingMotor.records, 'motor'));
+  if (pendingFlare?.records?.length) sends.push(sendRecordsToSheet(pendingFlare.records, 'flare'));
+  Promise.allSettled(sends).then(results => {
+    const falhas = results.filter(r => r.status === 'rejected');
+    if (falhas.length) {
+      falhas.forEach(f => log(`⚠ Falha ao enviar pra planilha: ${f.reason?.message || f.reason}`, 'warn'));
+      console.error('Falha ao enviar pra planilha de biogás:', falhas.map(f=>f.reason));
+      document.getElementById('importMsg').textContent = '✓ Importado localmente. ⚠ Falha ao enviar pra planilha — veja o log abaixo.';
+    } else {
+      document.getElementById('importMsg').textContent = '✓ Importado e salvo na planilha compartilhada!';
+      log('📤 Dados enviados pra planilha de biogás (abas Flare/Motor).', 'info');
+    }
   });
 
-  document.getElementById('downloadCsv').addEventListener('click', () => {
-    if (cachedRecords.length === 0){ alert('Ainda não há registros para exportar.'); return; }
-    const data = buildTableData();
-    const headers = Object.keys(data[0]);
-    const csvRows = [headers.join(';')];
-    data.forEach(row => {
-      csvRows.push(headers.map(h => '"' + String(row[h]).replace(/"/g,'""') + '"').join(';'));
-    });
-    const blob = new Blob(['\uFEFF' + csvRows.join('\n')], {type:'text/csv;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'paradas_flare_' + new Date().toISOString().slice(0,10) + '.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+  rebuildAllData();
+  clearImport();
+  renderHistory();
+}
+
+// ========================
+// SINCRONIZAÇÃO COM GOOGLE DRIVE (banco de dados compartilhado)
+// ========================
+async function sendRecordsToSheet(records, type){
+  const res = await fetch(FLARE_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'save_biogas_records', sheetType: type, records })
   });
+  const data = await res.json();
+  if (data.status !== 'ok') throw new Error(`Apps Script retornou erro: ${JSON.stringify(data)}`);
+  return data;
+}
+
+async function loadBiogasFromSheet(showFeedback){
+  const statusEl = document.getElementById('uploadStatus');
+  if (showFeedback) statusEl.textContent = 'Carregando da planilha compartilhada...';
+
+  let records;
+  try {
+    const res = await fetch(`${FLARE_API_URL}?action=get_biogas_records`);
+    const data = await res.json();
+    records = data.records || [];
+  } catch (e) {
+    if (showFeedback) statusEl.textContent = 'Não foi possível conectar à planilha.';
+    return;
+  }
+
+  // completa campos derivados que o resto do app espera (ano, mês, semana)
+  records.forEach(r => {
+    r.y = parseInt(r.d.slice(0,4));
+    r.m = r.d.slice(0,7);
+    r.w = getWeekStr(r.d);
+  });
+
+  localStorage.setItem('biogas_history', JSON.stringify(records));
+  rebuildAllData();
+
+  if (showFeedback) statusEl.textContent = `Sincronizado com a planilha · ${records.length} registro(s)`;
+}
+
+// ========================
+// RECALC CER sobre dados agregados
+// ========================
+function recalcCER(records) {
+  return records.map(r => {
+    if (r.cer && r.cer > 0) return r;
+    // mins = total minutos com dado no dia. Sem comunicação = sem dado = não computa
+    // Minutos disponíveis = mins com dado - minutos desligados
+    const minsDisponiveis = (r.mins || 1440) - (r.t || 0);
+    const horasValidas = Math.max(0, minsDisponiveis) / 60;
+    const vazao = r.v || 0;
+    const ch4   = r.me || 0;
+    if (horasValidas <= 0 || vazao <= 0 || ch4 <= 0) return r;
+    const cer = horasValidas * vazao * (ch4 / 100) * 0.715 / 1000 * 28 * 0.80;
+    return { ...r, cer: Math.round(cer * 1000) / 1000, hcer: Math.round(horasValidas * 10) / 10 };
+  });
+}
+
+function forceRecalcCER() {
+  if (!requireGasAuth()) return;
+  let stored = [];
+  try { const r = localStorage.getItem('biogas_history'); if(r) stored = JSON.parse(r); } catch(e){}
+  if (!stored.length) { updateAll(); return; }
+
+  const recalcAll = stored.map(r => {
+    const minsDisponiveis = (r.mins || 1440) - (r.t || 0);
+    const horasValidas = Math.max(0, minsDisponiveis) / 60;
+    const vazao = r.v || 0;
+    const ch4   = r.me || 0;
+    if (horasValidas <= 0 || vazao <= 0 || ch4 <= 0) return r;
+    const cer = horasValidas * vazao * (ch4 / 100) * 0.715 / 1000 * 28 * 0.80;
+    return { ...r, cer: Math.round(cer * 1000) / 1000, hcer: Math.round(horasValidas * 10) / 10 };
+  });
+
+  try { localStorage.setItem('biogas_history', JSON.stringify(recalcAll)); } catch(e){}
+  rebuildAllData();
+}
+function rebuildAllData() {
+  let stored = [];
+  try { const r=localStorage.getItem('biogas_history'); if(r) stored=JSON.parse(r); } catch(e){}
+  if (stored.length > 0) {
+    // Recalc CER on records that don't have it yet
+    stored = recalcCER(stored);
+    const storedKeys = new Set(stored.map(r=>r.d+'|'+r.s));
+    const base = BUILTIN_DATA.filter(r=>!storedKeys.has(r.d+'|'+r.s));
+    allData = [...base,...stored].sort((a,b)=>a.d.localeCompare(b.d));
+    document.getElementById('uploadStatus').textContent = `Base local + ${stored.length} reg. importados`;
+  } else {
+    allData = [...BUILTIN_DATA];
+    document.getElementById('uploadStatus').textContent = 'Base de dados local';
+  }
+  document.getElementById('dataRange').textContent = getDateRange();
+  buildPeriodSelect();
+  updateAll();
+}
+
+// ========================
+// HISTORY UI
+// ========================
+function renderHistory() {
+  const entries = JSON.parse(localStorage.getItem('biogas_import_log')||'[]');
+  const list = document.getElementById('historyList');
+  if (!entries.length) {
+    list.innerHTML='<div style="font-size:11px;color:var(--muted);padding:8px">Nenhuma importação ainda.</div>';
+    return;
+  }
+  const fmt = d => d.split('-').reverse().join('/');
+  list.innerHTML = entries.map((e,i) => `
+    <div class="history-item">
+      <div class="history-week">
+        ${e.days[0]?fmt(e.days[0]):'—'}${e.days.length>1?' → '+fmt(e.days[e.days.length-1]):''}
+      </div>
+      <div class="history-counts">
+        ${e.motorFile?'⚙️ Motor':''} ${e.flareFile?'🔥 Flare':''}
+        &nbsp;·&nbsp; ${e.count} registros
+      </div>
+      <div class="history-date">${new Date(e.ts).toLocaleString('pt-BR')}</div>
+      <button class="history-remove" onclick="removeEntry(${i})">✕</button>
+    </div>`).join('');
+}
+
+function removeEntry(idx) {
+  if (!requireGasAuth()) return;
+  const entries = JSON.parse(localStorage.getItem('biogas_import_log')||'[]');
+  const entry = entries[idx]; if (!entry) return;
+  const daysSet = new Set(entry.days);
+  let stored = JSON.parse(localStorage.getItem('biogas_history')||'[]');
+  stored = stored.filter(r=>!daysSet.has(r.d));
+  localStorage.setItem('biogas_history',JSON.stringify(stored));
+  entries.splice(idx,1);
+  localStorage.setItem('biogas_import_log',JSON.stringify(entries));
+  rebuildAllData(); renderHistory();
+}
+
+function clearAllHistory() {
+  if (!requireGasAuth()) return;
+  if (!confirm('Limpar todo o histórico importado?')) return;
+  localStorage.removeItem('biogas_history');
+  localStorage.removeItem('biogas_import_log');
+  rebuildAllData(); renderHistory();
+}
+
+// ========================
+// LOG HELPER
+// ========================
+function log(msg, type='info') {
+  const el = document.getElementById('importLog');
+  el.classList.add('show');
+  const cls = type==='ok'?'log-ok':type==='warn'?'log-warn':'log-info';
+  el.innerHTML += `<div class="${cls}">${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+// Drag and drop
+['dropMotor','dropFlare'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('dragover', e=>{e.preventDefault();el.classList.add('dragover');});
+  el.addEventListener('dragleave', ()=>el.classList.remove('dragover'));
+  el.addEventListener('drop', e=>{
+    e.preventDefault(); el.classList.remove('dragover');
+    const file = e.dataTransfer.files[0]; if(!file) return;
+    const type = id==='dropMotor'?'motor':'flare';
+    const input = document.getElementById(type==='motor'?'inputMotor':'inputFlare');
+    try {const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;} catch(e){}
+    handleDropFile(type, {files:[file]});
+  });
+});
+
+
+// ========================
+// DADOS DIÁRIOS TABLE
+// ========================
+let dadosSource = 'motor';
+let dadosSortCol = 'd';
+let dadosSortAsc = true;
+
+const MOTOR_COLS = [
+  { key:'d',    label:'Data',                          fmt: d => fmtDateBR(d),  cls:'date' },
+  { key:'hora', label:'Hora',                          fmt: () => '11:59',       cls:''     },
+  { key:'v',    label:'Biogás Coletado Norm. (Nm³/h)', fmt: n => fmtN(n,2),     cls:'num'  },
+  { key:'b',    label:'Biogás Coletado Norm. (Nm³)',   fmt: n => fmtN(n,2),     cls:'num'  },
+  { key:'ta',   label:'Temp. Antes do Chiller (°C)',   fmt: n => fmtN(n,2),     cls:'num'  },
+  { key:'td',   label:'Temp. Depois do Chiller (°C)',  fmt: n => fmtN(n,2),     cls:'num'  },
+  { key:'me',   label:'Metano (%)',                    fmt: n => fmtN(n,2),     cls:'num'  },
+  { key:'o',    label:'Oxigênio (%)',                  fmt: n => fmtN(n,2),     cls:'num'  },
+  { key:'co2',  label:'Dióxido de Carbono (%)',        fmt: n => fmtN(n,2),     cls:'num'  },
+  { key:'h',    label:'Sulfeto de Hidrogênio (ppm)',   fmt: n => fmtN(n,2),     cls:'num'  },
+  { key:'gen',  label:'Geração Total Ativa (MWh)',     fmt: n => fmtN(n,4),     cls:'num'  },
+  { key:'t',    label:'Tempo Desligado (min)',          fmt: n => fmtN(n,0),     cls:'num'  },
+  { key:'hcer', label:'Horas Válidas CER',             fmt: n => fmtN(n,1),     cls:'num'  },
+  { key:'cer',  label:'CER (tCO₂eq)',                  fmt: n => fmtN(n,4),     cls:'num'  },
+];
+
+const FLARE_COLS = [
+  { key:'d',    label:'Data',                          fmt: d => fmtDateBR(d),  cls:'date' },
+  { key:'hora', label:'Hora',                          fmt: () => '11:59',       cls:''     },
+  { key:'v',    label:'Biogás Coletado Norm. (Nm³/h)', fmt: n => fmtN(n,2),     cls:'num'  },
+  { key:'b',    label:'Biogás Coletado Norm. (Nm³)',   fmt: n => fmtN(n,2),     cls:'num'  },
+  { key:'tp',   label:'Temperatura Biogás Tocha (°C)', fmt: n => fmtN(n,2),     cls:'num'  },
+  { key:'me',   label:'Metano (%)',                    fmt: n => fmtN(n,2),     cls:'num'  },
+  { key:'o',    label:'Oxigênio (%)',                  fmt: n => fmtN(n,2),     cls:'num'  },
+  { key:'co2',  label:'Dióxido de Carbono (%)',        fmt: n => fmtN(n,2),     cls:'num'  },
+  { key:'h',    label:'Sulfeto de Hidrogênio (ppm)',   fmt: n => fmtN(n,2),     cls:'num'  },
+  { key:'t',    label:'Tempo Desligado (min)',          fmt: n => fmtN(n,0),     cls:'num'  },
+  { key:'hcer', label:'Horas Válidas CER',             fmt: n => fmtN(n,1),     cls:'num'  },
+  { key:'cer',  label:'CER (tCO₂eq)',                  fmt: n => fmtN(n,4),     cls:'num'  },
+];
+
+function fmtDateBR(d) {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+function fmtN(n, dec) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return Number(n).toLocaleString('pt-BR', {minimumFractionDigits:dec, maximumFractionDigits:dec});
+}
+
+function setDadosSource(src, btn) {
+  dadosSource = src;
+  document.querySelectorAll('#dadosSourceBtns .source-btn').forEach(b =>
+    b.classList.remove('active-motor','active-flare'));
+  btn.classList.add('active-' + src);
+  renderDadosTable();
+}
+
+function getDadosData() {
+  const search = (document.getElementById('dadosSearch')?.value || '').toLowerCase();
+  let rows = allData.filter(r => r.s === dadosSource);
+  if (search) rows = rows.filter(r => r.d.includes(search) || fmtDateBR(r.d).includes(search));
+  // Sort
+  rows = [...rows].sort((a,b) => {
+    const av = a[dadosSortCol] ?? '', bv = b[dadosSortCol] ?? '';
+    const res = typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv));
+    return dadosSortAsc ? res : -res;
+  });
+  return rows;
+}
+
+function renderDadosTable() {
+  const cols = dadosSource === 'motor' ? MOTOR_COLS : FLARE_COLS;
+  const rows = getDadosData();
+
+  // Header
+  const thead = document.getElementById('dadosHead');
+  thead.innerHTML = '<tr>' + cols.map(c => `
+    <th class="${dadosSortCol===c.key?'sorted':''}" onclick="sortDados('${c.key}')">
+      ${c.label}
+      <span class="sort-icon">${dadosSortCol===c.key?(dadosSortAsc?'↑':'↓'):'↕'}</span>
+    </th>`).join('') + '</tr>';
+
+  // Body
+  const tbody = document.getElementById('dadosBody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="${cols.length}" style="text-align:center;padding:32px;color:var(--muted)">
+      Nenhum dado encontrado. Importe planilhas na aba "Importar Semana".</td></tr>`;
+    document.getElementById('dadosCount').textContent = '';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(row =>
+    '<tr>' + cols.map(c => {
+      const val = row[c.key];
+      const display = c.fmt(val);
+      return `<td class="${c.cls||''}">${display}</td>`;
+    }).join('') + '</tr>'
+  ).join('');
+
+  const src = dadosSource === 'motor' ? '⚙️ Motor' : '🔥 Flare';
+  document.getElementById('dadosCount').textContent = `${rows.length} registros · ${src}`;
+}
+
+function sortDados(col) {
+  if (dadosSortCol === col) dadosSortAsc = !dadosSortAsc;
+  else { dadosSortCol = col; dadosSortAsc = true; }
+  renderDadosTable();
+}
+
+function exportDados() {
+  const cols = dadosSource === 'motor' ? MOTOR_COLS : FLARE_COLS;
+  const rows = getDadosData();
+  if (!rows.length) { alert('Nenhum dado para exportar.'); return; }
+
+  // Build worksheet data
+  const headers = cols.map(c => c.label);
+  const data = rows.map(row => cols.map(c => {
+    const v = row[c.key];
+    if (v === null || v === undefined) return '';
+    if (c.key === 'd') return fmtDateBR(v);
+    return typeof v === 'number' ? v : v;
+  }));
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+
+  // Column widths
+  ws['!cols'] = cols.map(c => ({ wch: Math.max(c.label.length, 14) }));
+
+  const wb = XLSX.utils.book_new();
+  const sheetName = dadosSource === 'motor' ? 'Motor' : 'Flare';
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+  const filename = `dados_diarios_${sheetName.toLowerCase()}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, filename);
+}
+// On init, merge localStorage with builtin
+document.addEventListener('DOMContentLoaded', () => {
+  rebuildAllData();
+}, {once: true});
+
+// ========================
+// PROTEÇÃO POR SENHA — edição dos dados de gás
+// (bloqueio simples: impede edição acidental. NÃO é segurança de verdade,
+//  a senha fica visível a quem abrir o código da página — troque antes de usar)
+// ========================
+const GAS_EDIT_PASSWORD = "flare2026"; // <-- troque por uma senha sua antes de publicar
+
+function requireGasAuth(){
+  if (sessionStorage.getItem('gasAuthOk') === '1') return true;
+  const pass = prompt('Digite a senha para editar os dados de biogás:');
+  if (pass === null) return false;
+  if (pass === GAS_EDIT_PASSWORD) {
+    sessionStorage.setItem('gasAuthOk', '1');
+    return true;
+  }
+  alert('Senha incorreta.');
+  return false;
+}
+
+// ========================
+// MÓDULO FLARE — Registrar Parada + Histórico
+// (fonte de dados: Google Sheets via Apps Script, mesma URL usada no app do celular)
+// ========================
+const FLARE_API_URL = "https://script.google.com/macros/s/AKfycbyF9I1NxPMiAC4bSWRR0ktJJfcF-zcXIfrwx8t_TWner4gtBcC_H2Gof3BKeW7pUdQ8/exec";
+
+let flareMotivoSelecionado = null;
+let flareCachedRecords = [];
+
+document.querySelectorAll('.flare-btn-now').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = document.getElementById(btn.dataset.target);
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    target.value = now.toISOString().slice(0,16);
+  });
+});
+
+document.querySelectorAll('.flare-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.flare-chip').forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
+    flareMotivoSelecionado = chip.dataset.value;
+    document.getElementById('flareOutroWrap').classList.toggle('show', flareMotivoSelecionado === 'Outro');
+    document.getElementById('flareErrMotivo').style.display = 'none';
+  });
+});
+
+function flareShowError(id, show){ document.getElementById('flareErr' + id).style.display = show ? 'block' : 'none'; }
+
+function flareFormatDuration(min){
+  const h = Math.floor(min / 60);
+  const m = Math.round(min % 60);
+  return h + 'h ' + m + 'min';
+}
+
+document.getElementById('flareSubmitBtn').addEventListener('click', async () => {
+  const inicioInput = document.getElementById('flareInicio');
+  const retornoInput = document.getElementById('flareRetorno');
+  const motivoOutro = document.getElementById('flareMotivoOutro');
+  let valid = true;
+
+  if (!inicioInput.value){ flareShowError('Inicio', true); valid = false; } else flareShowError('Inicio', false);
+  if (!flareMotivoSelecionado || (flareMotivoSelecionado === 'Outro' && !motivoOutro.value.trim())){ flareShowError('Motivo', true); valid = false; } else flareShowError('Motivo', false);
+  if (!retornoInput.value || (inicioInput.value && retornoInput.value <= inicioInput.value)){ flareShowError('Retorno', true); valid = false; } else flareShowError('Retorno', false);
+  if (!valid) return;
+
+  const motivoFinal = flareMotivoSelecionado === 'Outro' ? motivoOutro.value.trim() : flareMotivoSelecionado;
+  const payload = {
+    inicio: inicioInput.value,
+    motivo: motivoFinal,
+    retorno: retornoInput.value,
+    observacoes: document.getElementById('flareObservacoes').value
+  };
+
+  const btn = document.getElementById('flareSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+  showLoading(true);
+  document.getElementById('loadingMsg').textContent = 'Registrando parada do flare...';
+
+  try {
+    const res = await fetch(FLARE_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.status !== 'ok') throw new Error('resposta inesperada');
+    alert('Parada registrada com sucesso!');
+    document.getElementById('flareForm').reset();
+    document.querySelectorAll('.flare-chip').forEach(c => c.classList.remove('selected'));
+    flareMotivoSelecionado = null;
+    document.getElementById('flareOutroWrap').classList.remove('show');
+  } catch (e) {
+    alert('Não foi possível salvar o registro. Verifique a conexão e tente novamente.');
+  }
+
+  showLoading(false);
+  btn.disabled = false;
+  btn.textContent = 'Registrar Parada';
+});
+
+async function loadFlareRecords(){
+  const listEl = document.getElementById('flareRecordsList');
+  const loadingEl = document.getElementById('flareLoadingMsg');
+  loadingEl.style.display = 'block';
+  listEl.innerHTML = '';
+
+  try {
+    const res = await fetch(FLARE_API_URL, { method: 'GET' });
+    const data = await res.json();
+    const records = (data && data.records) ? data.records : [];
+    records.sort((a, b) => new Date(b.inicio) - new Date(a.inicio));
+    flareCachedRecords = records;
+    flareRenderRecords(records);
+  } catch (e) {
+    listEl.innerHTML = '<div class="flare-empty">Não foi possível carregar os registros. Verifique a conexão.</div>';
+  }
+  loadingEl.style.display = 'none';
+}
+
+function flareEscapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function flareRenderRecords(records){
+  const listEl = document.getElementById('flareRecordsList');
+  document.getElementById('flareSumCount').textContent = records.length;
+  const totalMin = records.reduce((sum, r) => sum + (Number(r.duracaoMin) || 0), 0);
+  document.getElementById('flareSumTime').textContent = flareFormatDuration(totalMin);
+
+  if (records.length === 0){
+    listEl.innerHTML = '<div class="flare-empty">Nenhuma parada registrada ainda.</div>';
+    return;
+  }
+
+  listEl.innerHTML = records.map(r => {
+    const dInicio = new Date(r.inicio);
+    const dRetorno = new Date(r.retorno);
+    const fmt = d => d.toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit'});
+    return `
+      <div class="flare-record">
+        <div class="flare-record-top">
+          <div class="flare-record-motivo">${flareEscapeHtml(r.motivo)}</div>
+          <div class="flare-record-duration">${r.tempoParado || flareFormatDuration(Number(r.duracaoMin)||0)}</div>
+        </div>
+        <div class="flare-record-dates">
+          Início: ${fmt(dInicio)}<br>
+          Retorno: ${fmt(dRetorno)}
+        </div>
+        ${r.observacoes ? `<div class="flare-record-obs">${flareEscapeHtml(r.observacoes)}</div>` : ''}
+        <button class="flare-record-del" data-id="${r.id}">Excluir registro</button>
+      </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('.flare-record-del').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Excluir este registro? Essa ação não pode ser desfeita.')) return;
+      btn.disabled = true;
+      btn.textContent = 'Excluindo...';
+      try {
+        await fetch(FLARE_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'delete', id: btn.dataset.id })
+        });
+        loadFlareRecords();
+      } catch (e) {
+        alert('Não foi possível excluir o registro.');
+        btn.disabled = false;
+        btn.textContent = 'Excluir registro';
+      }
+    });
+  });
+}
+
+function flareBuildTableData(){
+  return flareCachedRecords.map(r => ({
+    'Início da parada': new Date(r.inicio).toLocaleString('pt-BR'),
+    'Motivo': r.motivo,
+    'Retorno ao funcionamento': new Date(r.retorno).toLocaleString('pt-BR'),
+    'Tempo parado': r.tempoParado || flareFormatDuration(Number(r.duracaoMin)||0),
+    'Observações': r.observacoes || ''
+  }));
+}
+
+document.getElementById('flareDownloadXlsx').addEventListener('click', () => {
+  if (flareCachedRecords.length === 0){ alert('Ainda não há registros para exportar.'); return; }
+  const ws = XLSX.utils.json_to_sheet(flareBuildTableData());
+  ws['!cols'] = [{wch:18},{wch:26},{wch:22},{wch:14},{wch:30}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Paradas do Flare');
+  XLSX.writeFile(wb, 'paradas_flare_' + new Date().toISOString().slice(0,10) + '.xlsx');
+});
+
+document.getElementById('flareDownloadCsv').addEventListener('click', () => {
+  if (flareCachedRecords.length === 0){ alert('Ainda não há registros para exportar.'); return; }
+  const data = flareBuildTableData();
+  const headers = Object.keys(data[0]);
+  const csvRows = [headers.join(';')];
+  data.forEach(row => {
+    csvRows.push(headers.map(h => '"' + String(row[h]).replace(/"/g,'""') + '"').join(';'));
+  });
+  const blob = new Blob(['\uFEFF' + csvRows.join('\n')], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'paradas_flare_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('flareRefreshBtn').addEventListener('click', loadFlareRecords);
 </script>
-
+</div><!-- end dashboard-page -->
 </body>
 </html>
