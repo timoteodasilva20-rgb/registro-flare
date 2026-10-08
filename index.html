@@ -1134,16 +1134,7 @@
       </button>
     </div>
     <span class="upload-status" id="uploadStatus">Base de dados local</span>
-    <button onclick="loadBiogasFromSheet(true)" title="Sincronizar com a planilha" style="
-      background:none;border:1px solid var(--border);color:var(--muted);
-      width:28px;height:28px;border-radius:6px;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;
-      transition:all 0.2s;flex-shrink:0;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-      </svg>
-    </button>
-    <button onclick="forceRecalcCER()" title="Recalcular CER" style="
+    <button onclick="loadBiogasFromSheet(true)" title="Atualizar todos os dados (busca tudo de novo da planilha)" style="
       background:none;border:1px solid var(--border);color:var(--muted);
       width:28px;height:28px;border-radius:6px;cursor:pointer;
       display:flex;align-items:center;justify-content:center;
@@ -1153,6 +1144,7 @@
         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
       </svg>
     </button>
+
   </div>
 </div>
 
@@ -1441,19 +1433,19 @@
       <div class="kpi-unit">horas totais</div>
     </div>
     <div class="kpi-card" style="--kpi-color:#3b82f6">
-      <div class="kpi-label">CER Motor</div>
+      <div class="kpi-label">CER Motor (estimativa)</div>
       <div class="kpi-value" id="kpi-cer-motor">—</div>
-      <div class="kpi-unit">tCO₂eq</div>
+      <div class="kpi-unit">tCO₂eq · não oficial</div>
     </div>
     <div class="kpi-card" style="--kpi-color:#f59e0b">
-      <div class="kpi-label">CER Flare</div>
+      <div class="kpi-label">CER Flare (estimativa)</div>
       <div class="kpi-value" id="kpi-cer-flare">—</div>
-      <div class="kpi-unit">tCO₂eq</div>
+      <div class="kpi-unit">tCO₂eq · estimativa pela metodologia VCS · não oficial</div>
     </div>
     <div class="kpi-card" style="--kpi-color:#00e5a0">
-      <div class="kpi-label">CER Total</div>
+      <div class="kpi-label">CER Total (estimativa)</div>
       <div class="kpi-value" id="kpi-cer-total">—</div>
-      <div class="kpi-unit">tCO₂eq (motor + flare)</div>
+      <div class="kpi-unit">tCO₂eq · consulte a Unicarbo pro valor oficial</div>
     </div>
   </div>
 
@@ -2696,6 +2688,22 @@ function colAvg(rows, col, filterFn) {
   return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*100)/100 : null;
 }
 
+// Corrige leituras de metano quando o analisador está descalibrado: toda leitura
+// abaixo de 30% é substituída pela média das leituras boas (>= 40%) do mesmo dia.
+// Retorna os valores já corrigidos (array), prontos pra tirar média.
+function correctCh4Readings(rows, col) {
+  if (!col) return [];
+  const raw = rows.map(r => safeNum(r[col])).filter(v => v !== null);
+  const boas = raw.filter(v => v >= 40);
+  const mediaBoas = boas.length ? boas.reduce((a,b)=>a+b,0) / boas.length : null;
+  return raw.map(v => (v < 30 && mediaBoas !== null) ? mediaBoas : v);
+}
+
+function avgArray(arr) {
+  if (!arr.length) return null;
+  return Math.round(arr.reduce((a,b)=>a+b,0)/arr.length*100)/100;
+}
+
 function colLast(rows, col) {
   if (!col) return null;
   for (let i=rows.length-1;i>=0;i--) {
@@ -2736,29 +2744,59 @@ function aggregateFlare(rows) {
     // Minutos com dado real = linhas onde vazão não é nula
     // (linhas sem comunicação existem no arquivo mas com valores nulos)
     const minsComDado = dayRows.length - minsSemDado;
+
+    // --- Classificação VÁLIDO / NÃO VÁLIDO / DESLIGADO-SEM DADOS (registro a registro) ---
+    // VÁLIDO exige TODOS os campos de operação presentes + dentro da faixa + status "Ligado".
+    // Linha com qualquer campo de operação vazio (mesmo com data/hora preenchida) = sem dado, não gera crédito.
     const validRows = dayRows.filter(r => {
       const v = safeNum(r[cVazao]);
       const t = safeNum(r[cTemp]);
-      return v !== null && t !== null && v >= 350 && v <= 1200 && t > 650;
+      const ch4 = safeNum(r[cMetano]);
+      const statusTxt = cStatus ? String(r[cStatus]||'').trim().toLowerCase() : '';
+      if (v === null || t === null || ch4 === null || !statusTxt) return false; // sem dado de operação
+      return v >= 350 && v <= 1200 && t > 650 && statusTxt === 'ligado';
     });
     const horasValidas = validRows.length / 60;
 
-    // Médias diárias: todos os minutos com dado válido (não nulo)
+    // Vazão/CH4 médios do dia usados só pra exibição (vêm de todos os minutos com dado,
+    // já com a correção de CH4 descalibrado aplicada) — não entram no cálculo de crédito.
     const allWithVazao = dayRows.map(r => safeNum(r[cVazao])).filter(v => v !== null);
-    const allWithCh4   = dayRows.map(r => safeNum(r[cMetano])).filter(v => v !== null);
+    const ch4Corrigido = correctCh4Readings(dayRows, cMetano);
     const vazaoMediaDia = allWithVazao.length ? allWithVazao.reduce((a,b)=>a+b,0) / allWithVazao.length : 0;
-    const ch4MedioDia   = allWithCh4.length   ? allWithCh4.reduce((a,b)=>a+b,0)   / allWithCh4.length   : 0;
+    const ch4MedioDia   = avgArray(ch4Corrigido) || 0;
 
-    const cer = horasValidas > 0
-      ? horasValidas * vazaoMediaDia * (ch4MedioDia / 100) * 0.715 / 1000 * 28 * 0.80
-      : 0;
+    // --- Cálculo do crédito: registro a registro, só nos minutos VÁLIDOS ---
+    // CH4 destruído (Nm³) = Σ (vazão × %CH4/100 / 60), minuto a minuto, só onde VÁLIDO.
+    // Isso evita o viés de "média × média" quando vazão e CH4 variam juntos.
+    let ch4DestruidoNm3 = 0;
+    validRows.forEach(r => {
+      const v = safeNum(r[cVazao]);
+      const ch4 = safeNum(r[cMetano]);
+      ch4DestruidoNm3 += v * (ch4/100) / 60;
+    });
+    // --- Fórmula oficial (VCS Project 3916 — metodologia ACM0001 + ferramentas CDM) ---
+    // Parâmetros extraídos do Monitoring Report (Verra/VCS), validados contra o
+    // relatório oficial Unicarbo/Gold Standard de set/2026 (diferença de 0,09%):
+    //   ρCH4,n (densidade do CH4 em condições normais)     = 0,7156650 kg/Nm³
+    //   η_flare,m (eficiência da tocha no minuto válido)    = 80% (90% padrão - 10% ajuste
+    //                                                          por ser tocha de baixa altura)
+    //   OXtop_layer (fator de oxidação da camada do aterro) = 10%
+    //   GWP_CH4 (potencial de aquecimento global do metano) = 28 (AR5)
+    // Fórmula: BECH4,y(flare) = (1 - OXtop_layer) × η_flare × CH4_destruído(ton) × GWP_CH4
+    const RHO_CH4 = 0.7156650;
+    const ETA_FLARE = 0.80;
+    const OX_TOP_LAYER = 0.10;
+    const GWP_CH4 = 28;
+
+    const ch4DestruidoTon = ch4DestruidoNm3 * RHO_CH4 / 1000;
+    const cer = (1 - OX_TOP_LAYER) * ETA_FLARE * ch4DestruidoTon * GWP_CH4;
 
     records.push({
       d:date, y:parseInt(date.slice(0,4)), m:date.slice(0,7), w:getWeekStr(date), s:'flare',
       v:   colAvg(dayRows, cVazao),
       b:   colLast(dayRows, cBiogas),
       tp:  colAvg(dayRows, cTemp),
-      me:  colAvg(dayRows, cMetano),
+      me:  avgArray(ch4Corrigido),
       o:   colAvg(dayRows, cO2, v => v <= 5),
       co2: colAvg(dayRows, cCO2),
       h:   colAvg(dayRows, cH2S),
@@ -2785,6 +2823,22 @@ function aggregateMotor(rows) {
   const cGen     = cols.find(c => /gera[çc][aã]o/i.test(c) || /mwh/i.test(c));
   const cStatus  = cols.find(c => /status/i.test(c));
 
+  // --- Parâmetros oficiais (VCS Project 3916) pro cálculo do Motor/Gerador ---
+  const RHO_CH4_MOTOR = 0.7156650;     // kg CH4/Nm³ CH4
+  const OX_TOP_LAYER_MOTOR = 0.10;     // fator de oxidação, mesma camada do aterro
+  const GWP_CH4_MOTOR = 28;
+  // Fator de emissão da rede (combined margin) — valor de 2024, o mais recente
+  // publicado no Monitoring Report oficial. PRECISA ser atualizado todo ano civil
+  // assim que o novo EFgrid,CM,y for publicado (normalmente no plano de monitoramento
+  // ou em fontes oficiais do setor elétrico).
+  const EF_GRID_CM = 0.2372;           // tCO2/MWh (2024 — ATUALIZAR anualmente)
+  const TDL_GRID = 0.03;               // 3% perdas de transmissão/distribuição
+  // Observação: não inclui PEEC,y (emissão por consumo de energia da rede pelo projeto)
+  // porque esse valor é pequeno (~1 tCO2e/mês no relatório oficial) e exigiria um
+  // medidor de consumo de rede que o app não monitora hoje.
+
+  let genAnterior = null; // geração acumulada (MWh) do último dia processado, pra calcular o delta diário
+
   const records = [];
   groupByDate(rows).forEach((dayRows, date) => {
     // Minutos sem dado (vazão nula) = sem comunicação = considera como parado
@@ -2802,21 +2856,44 @@ function aggregateMotor(rows) {
     // Minutos com dado real = linhas onde vazão não é nula
     const minsComDado = dayRows.length - minsSemDado;
 
-    // CER Motor: horas válidas = minutos com dado E status Ligado
+    // CER Motor: horas válidas = minutos com dado E status Ligado (motor "working")
     const validRows = cStatus
       ? dayRows.filter(r => safeNum(r[cVazao]) !== null && !String(r[cStatus]).toLowerCase().includes('desligado'))
       : dayRows.filter(r => safeNum(r[cVazao]) !== null);
     const horasValidas = validRows.length / 60;
 
-    // Médias diárias: todos os minutos com dado válido (não nulo)
+    // Médias diárias: todos os minutos com dado válido (não nulo) — só pra exibição
     const allWithVazao = dayRows.map(r => safeNum(r[cVazao])).filter(v => v !== null);
-    const allWithCh4   = dayRows.map(r => safeNum(r[cMetano])).filter(v => v !== null);
+    const ch4Corrigido = correctCh4Readings(dayRows, cMetano); // leituras <30% substituídas pela média das >=40%
     const vazaoMediaDia = allWithVazao.length ? allWithVazao.reduce((a,b)=>a+b,0) / allWithVazao.length : 0;
-    const ch4MedioDia   = allWithCh4.length   ? allWithCh4.reduce((a,b)=>a+b,0)   / allWithCh4.length   : 0;
+    const ch4MedioDia   = avgArray(ch4Corrigido) || 0;
 
-    const cer = horasValidas > 0
-      ? horasValidas * vazaoMediaDia * (ch4MedioDia / 100) * 0.715 / 1000 * 28 * 0.80
-      : 0;
+    // --- Componente 1: metano destruído no motor (FCH4,EL,y), registro a registro,
+    // só nos minutos "working" (vazão+CH4 presentes e motor ligado). Diferente do
+    // flare, aqui não existe redução de eficiência (motor de combustão interna
+    // assume 100% quando ligado) — só entra ou não entra, por minuto. ---
+    let ch4MotorNm3 = 0;
+    validRows.forEach(r => {
+      const v = safeNum(r[cVazao]);
+      const ch4v = safeNum(r[cMetano]);
+      if (v !== null && ch4v !== null) ch4MotorNm3 += v * (ch4v / 100) / 60;
+    });
+    const ch4MotorTon = ch4MotorNm3 * RHO_CH4_MOTOR / 1000;
+    const beCh4Motor = (1 - OX_TOP_LAYER_MOTOR) * ch4MotorTon * GWP_CH4_MOTOR;
+
+    // --- Componente 2: energia evitada da rede (BEEC,y), proporcional à energia
+    // gerada NESSE DIA (delta do medidor acumulado em relação ao dia anterior). ---
+    // No primeiro dia do arquivo não existe leitura do dia anterior: usa a primeira
+    // leitura desse próprio dia como ponto de partida (senão a geração do dia 1 se perderia).
+    if (genAnterior === null && cGen) {
+      const primeiraGen = dayRows.map(r => safeNum(r[cGen])).find(v => v !== null);
+      if (primeiraGen !== undefined) genAnterior = primeiraGen;
+    }
+    const geracaoDiaMWh = (genAnterior !== null && gen !== null) ? Math.max(0, gen - genAnterior) : 0;
+    const beecDia = geracaoDiaMWh * EF_GRID_CM * (1 + TDL_GRID);
+    if (gen !== null) genAnterior = gen;
+
+    const cer = beCh4Motor + beecDia;
 
     records.push({
       d:date, y:parseInt(date.slice(0,4)), m:date.slice(0,7), w:getWeekStr(date), s:'motor',
@@ -2824,7 +2901,7 @@ function aggregateMotor(rows) {
       b:   colLast(dayRows, cBiogas),
       ta:  colAvg(dayRows, cTempA),
       td:  colAvg(dayRows, cTempD),
-      me:  colAvg(dayRows, cMetano),
+      me:  avgArray(ch4Corrigido),
       o:   colAvg(dayRows, cO2, v => v <= 5),
       co2: colAvg(dayRows, cCO2),
       h:   colAvg(dayRows, cH2S),
@@ -3032,39 +3109,13 @@ async function loadBiogasFromSheet(showFeedback){
 // ========================
 // RECALC CER sobre dados agregados
 // ========================
+// O CER só pode ser calculado corretamente no momento da importação, usando os
+// dados minuto a minuto do arquivo original (metodologia registro a registro).
+// Depois que os dados viram médias diárias, não existe forma válida de "recalcular"
+// o CER a partir delas — por isso essa função não recalcula nada, só devolve os
+// registros como estão (o cer já veio certo da importação / da planilha).
 function recalcCER(records) {
-  return records.map(r => {
-    if (r.cer && r.cer > 0) return r;
-    // mins = total minutos com dado no dia. Sem comunicação = sem dado = não computa
-    // Minutos disponíveis = mins com dado - minutos desligados
-    const minsDisponiveis = (r.mins || 1440) - (r.t || 0);
-    const horasValidas = Math.max(0, minsDisponiveis) / 60;
-    const vazao = r.v || 0;
-    const ch4   = r.me || 0;
-    if (horasValidas <= 0 || vazao <= 0 || ch4 <= 0) return r;
-    const cer = horasValidas * vazao * (ch4 / 100) * 0.715 / 1000 * 28 * 0.80;
-    return { ...r, cer: Math.round(cer * 1000) / 1000, hcer: Math.round(horasValidas * 10) / 10 };
-  });
-}
-
-function forceRecalcCER() {
-  if (!requireGasAuth()) return;
-  let stored = [];
-  try { const r = localStorage.getItem('biogas_history'); if(r) stored = JSON.parse(r); } catch(e){}
-  if (!stored.length) { updateAll(); return; }
-
-  const recalcAll = stored.map(r => {
-    const minsDisponiveis = (r.mins || 1440) - (r.t || 0);
-    const horasValidas = Math.max(0, minsDisponiveis) / 60;
-    const vazao = r.v || 0;
-    const ch4   = r.me || 0;
-    if (horasValidas <= 0 || vazao <= 0 || ch4 <= 0) return r;
-    const cer = horasValidas * vazao * (ch4 / 100) * 0.715 / 1000 * 28 * 0.80;
-    return { ...r, cer: Math.round(cer * 1000) / 1000, hcer: Math.round(horasValidas * 10) / 10 };
-  });
-
-  try { localStorage.setItem('biogas_history', JSON.stringify(recalcAll)); } catch(e){}
-  rebuildAllData();
+  return records;
 }
 function rebuildAllData() {
   let stored = [];
@@ -3180,7 +3231,7 @@ const MOTOR_COLS = [
   { key:'gen',  label:'Geração Total Ativa (MWh)',     fmt: n => fmtN(n,4),     cls:'num'  },
   { key:'t',    label:'Tempo Desligado (min)',          fmt: n => fmtN(n,0),     cls:'num'  },
   { key:'hcer', label:'Horas Válidas CER',             fmt: n => fmtN(n,1),     cls:'num'  },
-  { key:'cer',  label:'CER (tCO₂eq)',                  fmt: n => fmtN(n,4),     cls:'num'  },
+  { key:'cer',  label:'CER estimado (tCO₂eq)',         fmt: n => fmtN(n,4),     cls:'num'  }, // metodologia do motor ainda não totalmente calibrada
 ];
 
 const FLARE_COLS = [
@@ -3195,7 +3246,7 @@ const FLARE_COLS = [
   { key:'h',    label:'Sulfeto de Hidrogênio (ppm)',   fmt: n => fmtN(n,2),     cls:'num'  },
   { key:'t',    label:'Tempo Desligado (min)',          fmt: n => fmtN(n,0),     cls:'num'  },
   { key:'hcer', label:'Horas Válidas CER',             fmt: n => fmtN(n,1),     cls:'num'  },
-  { key:'cer',  label:'CER (tCO₂eq)',                  fmt: n => fmtN(n,4),     cls:'num'  },
+  { key:'cer',  label:'CER estimado (tCO₂eq) — metodologia VCS', fmt: n => fmtN(n,4),    cls:'num'  },
 ];
 
 function fmtDateBR(d) {
